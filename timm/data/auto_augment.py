@@ -835,7 +835,7 @@ def rand_augment_transform(
         transforms = rand_augment_choices(transforms, increasing=increasing)
     elif transforms is None:
         # Amir
-        print(f"AMIR:: increaing {increaing}\n")
+        print(f"AMIR:: increaing {increasing}\n")
         # Rima
         transforms = _RAND_INCREASING_TRANSFORMS if increasing else _RAND_TRANSFORMS
 
