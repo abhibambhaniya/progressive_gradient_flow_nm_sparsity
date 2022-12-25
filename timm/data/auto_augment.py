@@ -844,7 +844,7 @@ def rand_augment_transform(
         transforms, choice_weights = _get_weighted_transforms(transforms)
         # print(f"AMIR:: choise_weights {choice_weights}")
         # Default seems not to be dict
-    print(f"AMIR: magnitude {magnitude} -- prob {prob} -- hparams {_hparams}")
+    print(f"AMIR: magnitude {magnitude} -- prob {prob} -- hparams {_hparams} -- choice_weights {choice_weights}")
     ra_ops = rand_augment_ops(magnitude=magnitude, prob=prob, hparams=hparams, transforms=transforms)
     return RandAugment(ra_ops, num_layers, choice_weights=choice_weights)
 
