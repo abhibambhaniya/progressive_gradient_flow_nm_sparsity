@@ -316,7 +316,7 @@ def _solarize_add_level_to_arg(level, _hparams):
     # range [0, 110]
     return min(128, int((level / _LEVEL_DENOM) * 110)),
 
-def _cutout_add_level_to_arg(level, _hparams):
+def _cutout_add_level_to_arg(level, hparams):
     return int((level/_LEVEL_DENOM) * hparams['cutout_const'])
 
 
