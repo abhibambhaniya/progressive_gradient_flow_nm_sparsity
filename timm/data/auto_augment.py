@@ -39,7 +39,7 @@ _LEVEL_DENOM = 10.  # denominator for conversion from 'Mx' magnitude scale to fr
 
 _HPARAMS_DEFAULT = dict(
     translate_const=250,
-    cutout_const=40
+    cutout_const=40,
     img_mean=_FILL,
 )
 
