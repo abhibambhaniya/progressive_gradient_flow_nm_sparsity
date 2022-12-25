@@ -296,7 +296,7 @@ class FastCollateMixup(Mixup):
         #     output[i] += torch.from_numpy(mixed.astype(np.uint8))
         # Amir
         index = torch.randperm(batch_size)
-        output = lam * x + (1. - lam) * x[index, :]
+        output = lam * batch + (1. - lam) * batch[index, :]
         # Rima
         return lam
 
