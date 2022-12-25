@@ -202,7 +202,12 @@ class Mixup:
                 x.shape, lam, ratio_minmax=self.cutmix_minmax, correct_lam=self.correct_lam)
             x[:, :, yl:yh, xl:xh] = x.flip(0)[:, :, yl:yh, xl:xh]
         else:
-            x_flipped = x.flip(0).mul_(1. - lam)
+            # Amir
+            index = torch.randperm(batch_size).cuda()
+            x_flipped = x[index, :].mul_(1. - lam)
+            # mixed_x = lam * x + (1 - lam) * x[index, :]
+            # x_flipped = x.flip(0).mul_(1. - lam)
+            # Rima
             x.mul_(lam).add_(x_flipped)
         return lam
 
