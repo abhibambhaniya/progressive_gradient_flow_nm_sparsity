@@ -90,6 +90,7 @@ def transforms_imagenet_train(
             img_size_min = img_size
         aa_params = dict(
             translate_const=int(img_size_min * 0.45),
+            cutout_const=40, # autoaugment 100
             img_mean=tuple([min(255, round(255 * x)) for x in mean]),
         )
         if interpolation and interpolation != 'random':
