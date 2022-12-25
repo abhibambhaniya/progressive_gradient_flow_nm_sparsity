@@ -666,7 +666,7 @@ _RAND_TRANSFORMS = [
     'ShearY',
     'TranslateXRel',
     'TranslateYRel',
-    'Cutout'
+    'Cutout',
 ]
 
 
@@ -686,7 +686,7 @@ _RAND_INCREASING_TRANSFORMS = [
     'ShearY',
     'TranslateXRel',
     'TranslateYRel',
-    Cutout'  # NOTE I've implement this as random erasing separately
+    'Cutout',
 ]
 
 
