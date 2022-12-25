@@ -195,6 +195,7 @@ class Mixup:
 
     def _mix_batch(self, x):
         lam, use_cutmix = self._params_per_batch()
+        pring(f"mix batch lam {lam} cutmix {use_cutmix}")
         if lam == 1.:
             return 1.
         if use_cutmix:
