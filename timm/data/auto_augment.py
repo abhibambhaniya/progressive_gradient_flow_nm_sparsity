@@ -216,7 +216,8 @@ def cutout(img, factor, **__):
                   pad_width=padding_dims, constant_values=1)
     mask = np.expand_dims(mask, -1)
     mask = np.tile(mask, [1, 1, 3])
-    return np.where(np.equal(mask, 0), np.ones_like(img)*0, img)
+    final_image = np.where(np.equal(mask, 0), np.ones_like(img)*0, img)
+    return Image.fromarray(final_image.astype('uint8')).convert('RGB')
 # Rima
 
 
