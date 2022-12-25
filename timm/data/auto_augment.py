@@ -834,10 +834,10 @@ def rand_augment_transform(
     if isinstance(transforms, str):
         transforms = rand_augment_choices(transforms, increasing=increasing)
     elif transforms is None:
-        # Amir
+        transforms = _RAND_INCREASING_TRANSFORMS if increasing else _RAND_TRANSFORMS
+        # Amir:: increasing is enabled (if you use `inc` in aa parameter)
         print(f"AMIR:: increaing {transforms}\n")
         # Rima
-        transforms = _RAND_INCREASING_TRANSFORMS if increasing else _RAND_TRANSFORMS
 
     choice_weights = None
     if isinstance(transforms, Dict):
