@@ -195,7 +195,6 @@ class Mixup:
 
     def _mix_batch(self, x):
         lam, use_cutmix = self._params_per_batch()
-        pring(f"mix batch lam {lam} cutmix {use_cutmix}")
         if lam == 1.:
             return 1.
         if use_cutmix:
@@ -203,13 +202,7 @@ class Mixup:
                 x.shape, lam, ratio_minmax=self.cutmix_minmax, correct_lam=self.correct_lam)
             x[:, :, yl:yh, xl:xh] = x.flip(0)[:, :, yl:yh, xl:xh]
         else:
-            # Amir
-            print("AMIR:: MIXUP")
-            index = torch.randperm(batch_size).cuda()
-            x_flipped = x[index, :].mul_(1. - lam)
-            # mixed_x = lam * x + (1 - lam) * x[index, :]
-            # x_flipped = x.flip(0).mul_(1. - lam)
-            # Rima
+            x_flipped = x.flip(0).mul_(1. - lam)
             x.mul_(lam).add_(x_flipped)
         return lam
 
@@ -290,17 +283,21 @@ class FastCollateMixup(Mixup):
         if use_cutmix:
             (yl, yh, xl, xh), lam = cutmix_bbox_and_lam(
                 output.shape, lam, ratio_minmax=self.cutmix_minmax, correct_lam=self.correct_lam)
-        for i in range(batch_size):
-            j = batch_size - i - 1
-            mixed = batch[i][0]
-            if lam != 1.:
-                if use_cutmix:
-                    mixed = mixed.copy()  # don't want to modify the original while iterating
-                    mixed[:, yl:yh, xl:xh] = batch[j][0][:, yl:yh, xl:xh]
-                else:
-                    mixed = mixed.astype(np.float32) * lam + batch[j][0].astype(np.float32) * (1 - lam)
-                    np.rint(mixed, out=mixed)
-            output[i] += torch.from_numpy(mixed.astype(np.uint8))
+        # for i in range(batch_size):
+        #     j = batch_size - i - 1
+        #     mixed = batch[i][0]
+        #     if lam != 1.:
+        #         if use_cutmix:
+        #             mixed = mixed.copy()  # don't want to modify the original while iterating
+        #             mixed[:, yl:yh, xl:xh] = batch[j][0][:, yl:yh, xl:xh]
+        #         else:
+        #             mixed = mixed.astype(np.float32) * lam + batch[j][0].astype(np.float32) * (1 - lam)
+        #             np.rint(mixed, out=mixed)
+        #     output[i] += torch.from_numpy(mixed.astype(np.uint8))
+        # Amir
+        index = torch.randperm(batch_size)
+        output = lam * x + (1. - lam) * x[index, :]
+        # Rima
         return lam
 
     def __call__(self, batch, _=None):
