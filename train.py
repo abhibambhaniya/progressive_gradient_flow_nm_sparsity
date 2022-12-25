@@ -798,9 +798,10 @@ def main():
                     write_header=best_metric is None,
                     log_wandb=args.log_wandb and has_wandb,
                 )
-
+            print(f"AMIR:: EPOCH {epoch} -- eval {eval_metrics}")
             if saver is not None and epoch % args.checkpoint_freq_epoch == 0:
                 # save proper checkpoint with eval metric
+                print(f"AMIR:: EPOCH {epoch} saving...")
                 save_metric = eval_metrics[eval_metric]
                 best_metric, best_epoch = saver.save_checkpoint(epoch, metric=save_metric)
 
