@@ -203,6 +203,7 @@ class Mixup:
             x[:, :, yl:yh, xl:xh] = x.flip(0)[:, :, yl:yh, xl:xh]
         else:
             # Amir
+            print("AMIR:: MIXUP")
             index = torch.randperm(batch_size).cuda()
             x_flipped = x[index, :].mul_(1. - lam)
             # mixed_x = lam * x + (1 - lam) * x[index, :]
