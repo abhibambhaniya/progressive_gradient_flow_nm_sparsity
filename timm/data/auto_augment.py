@@ -39,6 +39,7 @@ _LEVEL_DENOM = 10.  # denominator for conversion from 'Mx' magnitude scale to fr
 
 _HPARAMS_DEFAULT = dict(
     translate_const=250,
+    cutout_const=40
     img_mean=_FILL,
 )
 
@@ -193,6 +194,30 @@ def gaussian_blur_rand(img, factor, **__):
     return img
 
 
+# Amir
+def cutout(img, factor, **__):
+    image_width, image_height = img.size
+    
+    # Sample the center location in the image where the zero mask will be applied.
+    cutout_center_height = np.random.randint(low=0, high=image_height)
+    cutout_center_width = np.random.randint(low=0, high=image_width)
+
+    lower_pad = max(0, cutout_center_height - pad_size)
+    upper_pad = max(0, image_height - cutout_center_height - pad_size)
+    left_pad = max(0, cutout_center_width - pad_size)
+    right_pad = max(0, image_width - cutout_center_width - pad_size)
+
+    cutout_shape = [image_height - (lower_pad + upper_pad),
+                    image_width - (left_pad + right_pad)]
+    padding_dims = [[lower_pad, upper_pad], [left_pad, right_pad]]
+    mask = np.pad(np.zeros(cutout_shape).astype(np.uint8),
+                  pad_width=padding_dims, constant_values=1)
+    mask = np.expand_dims(mask, -1)
+    mask = np.tile(mask, [1, 1, 3])
+    return np.where(np.equal(mask, 0), np.ones_like(img)*0, img)
+# Rima
+
+
 def desaturate(img, factor, **_):
     factor = min(1., max(0., 1. - factor))
     # enhance factor 0 = grayscale, 1.0 = no-change
@@ -291,6 +316,9 @@ def _solarize_add_level_to_arg(level, _hparams):
     # range [0, 110]
     return min(128, int((level / _LEVEL_DENOM) * 110)),
 
+def _cutout_add_level_to_arg(level, _hparams):
+    return int((level/_LEVEL_DENOM) * hparams['cutout_const'])
+
 
 LEVEL_TO_ARG = {
     'AutoContrast': None,
@@ -321,6 +349,7 @@ LEVEL_TO_ARG = {
     'Desaturate': partial(_minmax_level_to_arg, min_val=0.5, max_val=1.0),
     'GaussianBlur': partial(_minmax_level_to_arg, min_val=0.1, max_val=2.0),
     'GaussianBlurRand': _minmax_level_to_arg,
+    'Cutout': _cutout_add_level_to_arg,
 }
 
 
@@ -352,6 +381,7 @@ NAME_TO_OP = {
     'Desaturate': desaturate,
     'GaussianBlur': gaussian_blur,
     'GaussianBlurRand': gaussian_blur_rand,
+    'Cutout': cutout,
 }
 
 
@@ -636,7 +666,7 @@ _RAND_TRANSFORMS = [
     'ShearY',
     'TranslateXRel',
     'TranslateYRel',
-    #'Cutout'  # NOTE I've implement this as random erasing separately
+    'Cutout'
 ]
 
 
@@ -656,7 +686,7 @@ _RAND_INCREASING_TRANSFORMS = [
     'ShearY',
     'TranslateXRel',
     'TranslateYRel',
-    #'Cutout'  # NOTE I've implement this as random erasing separately
+    Cutout'  # NOTE I've implement this as random erasing separately
 ]
 
 
