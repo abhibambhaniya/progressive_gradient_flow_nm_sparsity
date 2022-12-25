@@ -842,6 +842,7 @@ def rand_augment_transform(
     choice_weights = None
     if isinstance(transforms, Dict):
         transforms, choice_weights = _get_weighted_transforms(transforms)
+        print(f"AMIR:: choise_weights {choice_weights}")
 
     ra_ops = rand_augment_ops(magnitude=magnitude, prob=prob, hparams=hparams, transforms=transforms)
     return RandAugment(ra_ops, num_layers, choice_weights=choice_weights)
