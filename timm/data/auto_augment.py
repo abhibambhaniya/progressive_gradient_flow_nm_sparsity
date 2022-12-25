@@ -745,6 +745,7 @@ class RandAugment:
 
     def __call__(self, img):
         # no replacement when using weighted choice
+        # AMIR:: if choice_weight None, no replacement
         ops = np.random.choice(
             self.ops,
             self.num_layers,
@@ -846,6 +847,7 @@ def rand_augment_transform(
         # Default seems not to be dict
     print(f"AMIR: magnitude {magnitude} -- prob {prob} -- hparams {hparams} -- choice_weights {choice_weights}")
     ra_ops = rand_augment_ops(magnitude=magnitude, prob=prob, hparams=hparams, transforms=transforms)
+    print(f"Random Ops: {ra_ops}")
     return RandAugment(ra_ops, num_layers, choice_weights=choice_weights)
 
 
