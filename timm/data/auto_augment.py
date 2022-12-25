@@ -198,6 +198,8 @@ def gaussian_blur_rand(img, factor, **__):
 def cutout(img, factor, **__):
     image_width, image_height = img.size
     
+    pad_size = factor
+    
     # Sample the center location in the image where the zero mask will be applied.
     cutout_center_height = np.random.randint(low=0, high=image_height)
     cutout_center_width = np.random.randint(low=0, high=image_width)
