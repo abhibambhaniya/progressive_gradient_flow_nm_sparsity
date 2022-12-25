@@ -283,21 +283,17 @@ class FastCollateMixup(Mixup):
         if use_cutmix:
             (yl, yh, xl, xh), lam = cutmix_bbox_and_lam(
                 output.shape, lam, ratio_minmax=self.cutmix_minmax, correct_lam=self.correct_lam)
-        # for i in range(batch_size):
-        #     j = batch_size - i - 1
-        #     mixed = batch[i][0]
-        #     if lam != 1.:
-        #         if use_cutmix:
-        #             mixed = mixed.copy()  # don't want to modify the original while iterating
-        #             mixed[:, yl:yh, xl:xh] = batch[j][0][:, yl:yh, xl:xh]
-        #         else:
-        #             mixed = mixed.astype(np.float32) * lam + batch[j][0].astype(np.float32) * (1 - lam)
-        #             np.rint(mixed, out=mixed)
-        #     output[i] += torch.from_numpy(mixed.astype(np.uint8))
-        # Amir
-        index = torch.randperm(batch_size)
-        output = lam * batch + (1. - lam) * batch[index, :]
-        # Rima
+        for i in range(batch_size):
+            j = batch_size - i - 1
+            mixed = batch[i][0]
+            if lam != 1.:
+                if use_cutmix:
+                    mixed = mixed.copy()  # don't want to modify the original while iterating
+                    mixed[:, yl:yh, xl:xh] = batch[j][0][:, yl:yh, xl:xh]
+                else:
+                    mixed = mixed.astype(np.float32) * lam + batch[j][0].astype(np.float32) * (1 - lam)
+                    np.rint(mixed, out=mixed)
+            output[i] += torch.from_numpy(mixed.astype(np.uint8))
         return lam
 
     def __call__(self, batch, _=None):
