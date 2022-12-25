@@ -315,6 +315,8 @@ group.add_argument('--recovery-interval', type=int, default=0, metavar='N',
                     help='how many batches to wait before writing recovery checkpoint')
 group.add_argument('--checkpoint-hist', type=int, default=10, metavar='N',
                     help='number of checkpoints to keep (default: 10)')
+group.add_argument('--checkpoint-freq-epoch', type=int, default=5, metavar='N',
+                    help='the frequency of checkpointing (default: 5)')
 group.add_argument('-j', '--workers', type=int, default=4, metavar='N',
                     help='how many training processes to use (default: 4)')
 group.add_argument('--save-images', action='store_true', default=False,
@@ -797,7 +799,7 @@ def main():
                     log_wandb=args.log_wandb and has_wandb,
                 )
 
-            if saver is not None:
+            if saver is not None and epoch % args.checkpoint_freq_epoch == 0:
                 # save proper checkpoint with eval metric
                 save_metric = eval_metrics[eval_metric]
                 best_metric, best_epoch = saver.save_checkpoint(epoch, metric=save_metric)
