@@ -78,7 +78,7 @@ class CheckpointSaver:
             filename = '-'.join([self.save_prefix, str(epoch)]) + self.extension
             save_path = os.path.join(self.checkpoint_dir, filename)
             # os.link(last_save_path, save_path)
-            os.copyfile(last_save_path, save_path)
+            shutil.copyfile(last_save_path, save_path)
             self.checkpoint_files.append((save_path, metric))
             self.checkpoint_files = sorted(
                 self.checkpoint_files, key=lambda x: x[1],
