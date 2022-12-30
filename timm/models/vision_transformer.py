@@ -299,10 +299,10 @@ class VisionTransformer(nn.Module):
         self.m_spasrity = m_sparsity
         self.prune_rate = prune_rate
         
-        print(f"AMIR sparsity_type {self.sparsity_type}")
-        print(f"AMIR n_sparsity {self.n_sparsity}")
-        print(f"AMIR m_spasrity {self.m_spasrity}")
-        print(f"AMIR prune_rate  {self.prune_rate}")
+        # print(f"AMIR sparsity_type {self.sparsity_type}")
+        # print(f"AMIR n_sparsity {self.n_sparsity}")
+        # print(f"AMIR m_spasrity {self.m_spasrity}")
+        # print(f"AMIR prune_rate  {self.prune_rate}")
         # Rime
 
         self.patch_embed = embed_layer(
