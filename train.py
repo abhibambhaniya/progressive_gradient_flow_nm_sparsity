@@ -43,7 +43,7 @@ import enum
 # Rima
 
 # Amir
-@yaml_object(yaml)
+@yaml.yaml_object(yaml)
 class SparseType(str, enum.Enum):
   """Pruning types dataclass."""
   DENSE = 'DENSE'
