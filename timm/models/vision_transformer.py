@@ -245,6 +245,12 @@ class VisionTransformer(nn.Module):
             norm_layer=None,
             act_layer=None,
             block_fn=Block,
+            # Amir: Added sparsity argument to Vision
+            sparsity_type=None,
+            n_sparsity=None,
+            m_sparsity=None,
+            prune_rate=None,
+            # Rima: Added sparsity argument to Vision
     ):
         """
         Args:
@@ -268,6 +274,10 @@ class VisionTransformer(nn.Module):
             embed_layer (nn.Module): patch embedding layer
             norm_layer: (nn.Module): normalization layer
             act_layer: (nn.Module): MLP activation layer
+            sparsity_type: DENSE / STRUCTURED_NM / UNSTRUCTURED
+            n_sparsity: n value in N:M structured sparsity.
+            m_sparsity: m value in N:M structured sparsity.
+            prune_rate: prune rate in unstructured sparsity.
         """
         super().__init__()
         assert global_pool in ('', 'avg', 'token')
@@ -282,6 +292,18 @@ class VisionTransformer(nn.Module):
         self.num_prefix_tokens = 1 if class_token else 0
         self.no_embed_class = no_embed_class
         self.grad_checkpointing = False
+        
+        # Amir
+        self.sparsity_type = sparsity_type
+        self.n_sparsity = n_sparsity
+        self.m_spasrity = m_sparsity
+        self.prune_rate = prune_rate
+        
+        print(f"AMIR sparsity_type {self.sparsity_type}")
+        print(f"AMIR n_sparsity {self.n_sparsity}")
+        print(f"AMIR m_spasrity {self.m_spasrity}")
+        print(f"AMIR prune_rate  {self.prune_rate}")
+        # Rime
 
         self.patch_embed = embed_layer(
             img_size=img_size,
@@ -1133,8 +1155,6 @@ default_cfgs = generate_default_cfgs({
 def _create_vision_transformer(variant, pretrained=False, **kwargs):
     if kwargs.get('features_only', None):
         raise RuntimeError('features_only not implemented for Vision Transformer models.')
-    
-    print(f"Amir KWARGS: {kwargs}")
 
     if 'flexi' in variant:
         # FIXME Google FlexiViT pretrained models have a strong preference for bilinear patch / embed
