@@ -39,7 +39,7 @@ from timm.scheduler import create_scheduler_v2, scheduler_kwargs
 from timm.utils import ApexScaler, NativeScaler
 
 # Amir
-from enum import Enum
+import enum
 # Rima
 
 # Amir
