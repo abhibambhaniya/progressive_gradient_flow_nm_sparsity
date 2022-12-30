@@ -189,7 +189,7 @@ scripting_group.add_argument('--aot-autograd', default=False, action='store_true
 group = parser.add_argument_group('Sparsity parameters')
 group.add_argument(
     '--sparsity-type',
-    type=SparseType.from_string,
+    type=SparseType,
     default=None,
     choices=list(SparseType),
     metavar='SPARSITY_TYPE',
