@@ -179,7 +179,7 @@ group = parser.add_argument_group('Sparsity parameters')
 group.add_argument(
     '--sparsity-type',
     type=SparseType,
-    default=SparseType.DENSE,
+    default=None,
     action=enum_action(SparseType),
     metavar='SPARSITY_TYPE',
     help=(
