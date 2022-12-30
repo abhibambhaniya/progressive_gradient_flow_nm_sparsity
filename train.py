@@ -40,9 +40,13 @@ from timm.utils import ApexScaler, NativeScaler
 
 # Amir
 import enum
+import ruamel.yaml
+from ruamel.yaml import yaml_object
+yaml = ruamel.yaml.YAML()
 # Rima
 
 # Amir
+@yaml_object(yaml)
 class SparseType(str, enum.Enum):
   """Pruning types dataclass."""
   DENSE = 'DENSE'
@@ -58,6 +62,13 @@ class SparseType(str, enum.Enum):
           return SparseType[s]
       except KeyError:
           raise ValueError()
+      
+  @classmethod
+  def to_yaml(cls, representer, node):
+      return representer.represent_scalar(
+              u'!SparseType',
+              '{}-{}'.format(node._name_, node._value_)
+      )
 
 def restricted_float(x, min_value, max_value):
     try:
