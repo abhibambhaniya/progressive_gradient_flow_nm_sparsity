@@ -178,7 +178,8 @@ scripting_group.add_argument('--aot-autograd', default=False, action='store_true
 group = parser.add_argument_group('Sparsity parameters')
 group.add_argument(
     '--sparsity-type',
-    default=None,
+    type=SparseType,
+    default=SparseType.DENSE,
     action=enum_action(SparseType),
     metavar='SPARSITY_TYPE',
     help=(
