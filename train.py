@@ -52,14 +52,6 @@ class SparseType(str, enum.Enum):
   DENSE = 'DENSE'
   STRUCTURED_NM = 'STRUCTURED_NM'
   UNSTRUCTURED = 'UNSTRUCTURED'
-  
-  def __str__(self):
-      return self.name
-  
-  def __repr__(self):
-      return "sparsity_type"
-      
-  
 
 def restricted_float(x, min_value, max_value):
     try:
@@ -189,7 +181,7 @@ scripting_group.add_argument('--aot-autograd', default=False, action='store_true
 group = parser.add_argument_group('Sparsity parameters')
 group.add_argument(
     '--sparsity-type',
-    type=SparseType,
+    type=str,
     default=None,
     choices=list(SparseType),
     metavar='SPARSITY_TYPE',
