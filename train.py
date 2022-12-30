@@ -206,7 +206,6 @@ group.add_argument(
     metavar='PRUNE_RATE',
     help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).',
 )
-                   help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).')
 # Rima
 
 
