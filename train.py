@@ -42,8 +42,11 @@ from timm.utils import ApexScaler, NativeScaler
 import enum
 # Rima
 
+def __repr__(self):
+      return self.name + ": " + self.url
+
+
 # Amir
-@yaml.yaml_object(yaml)
 class SparseType(str, enum.Enum):
   """Pruning types dataclass."""
   DENSE = 'DENSE'
@@ -53,19 +56,10 @@ class SparseType(str, enum.Enum):
   def __str__(self):
       return self.name
   
-  @staticmethod
-  def from_string(s):
-      try:
-          return SparseType[s]
-      except KeyError:
-          raise ValueError()
+  def __repr__(self):
+      return "sparsity_type"
       
-  @classmethod
-  def to_yaml(cls, representer, node):
-      return representer.represent_scalar(
-              u'SparseType:',
-              '{}-{}'.format(node._name_, node._value_)
-      )
+  
 
 def restricted_float(x, min_value, max_value):
     try:
