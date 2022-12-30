@@ -40,7 +40,6 @@ from timm.utils import ApexScaler, NativeScaler
 
 # Amir
 import enum
-from enum_actions import enum_action
 # Rima
 
 # Amir
@@ -180,7 +179,7 @@ group.add_argument(
     '--sparsity-type',
     type=SparseType,
     default=None,
-    action=enum_action(SparseType),
+    choices=list(SparseType),
     metavar='SPARSITY_TYPE',
     help=(
         'Different forms of sparsity: no sparsity (dense: default), structured'
