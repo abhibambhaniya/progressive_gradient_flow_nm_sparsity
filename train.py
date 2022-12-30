@@ -47,7 +47,7 @@ yaml = ruamel.yaml.YAML()
 
 # Amir
 @yaml_object(yaml)
-class SparseType(enum.StrEnum):
+class SparseType(str, enum.Enum):
   """Pruning types dataclass."""
   DENSE = 'DENSE'
   STRUCTURED_NM = 'STRUCTURED_NM'
