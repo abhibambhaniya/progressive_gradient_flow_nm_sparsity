@@ -1133,6 +1133,8 @@ default_cfgs = generate_default_cfgs({
 def _create_vision_transformer(variant, pretrained=False, **kwargs):
     if kwargs.get('features_only', None):
         raise RuntimeError('features_only not implemented for Vision Transformer models.')
+    
+    print(f"Amir KWARGS: {kwargs}")
 
     if 'flexi' in variant:
         # FIXME Google FlexiViT pretrained models have a strong preference for bilinear patch / embed

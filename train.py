@@ -38,6 +38,29 @@ from timm.optim import create_optimizer_v2, optimizer_kwargs
 from timm.scheduler import create_scheduler_v2, scheduler_kwargs
 from timm.utils import ApexScaler, NativeScaler
 
+# Amir
+from enum import Enum
+# Rima
+
+# Amir
+class SparseType(str, enum.Enum):
+  """Pruning types dataclass."""
+  DENSE = 'DENSE'
+  STRUCTURED_NM = 'STRUCTURED_NM'
+  UNSTRUCTURED = 'UNSTRUCTURED'
+
+def restricted_float(x, min_value, max_value):
+    try:
+        x = float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
+
+    if x <= min_value or x >= max_value:
+        raise argparse.ArgumentTypeError("%r not in range (0.0, 1.0)"%(x,))
+    return x
+# Rima
+
+
 try:
     from apex import amp
     from apex.parallel import DistributedDataParallel as ApexDDP
@@ -147,6 +170,45 @@ scripting_group.add_argument('--torchcompile', nargs='?', type=str, default=None
                              help="Enable compilation w/ specified backend (default: inductor).")
 scripting_group.add_argument('--aot-autograd', default=False, action='store_true',
                              help="Enable AOT Autograd support.")
+
+# Amir
+# Sparsity parameters
+# All the None values are pruned before passing to models
+group = parser.add_argument_group('Sparsity parameters')
+group.add_argument(
+    '--sparsity-type',
+    type=SparseType,
+    default=None,
+    metavar='SPARSITY_TYPE',
+    help=(
+        'Different forms of sparsity: no sparsity (dense: default), structured'
+        ' sparsity, and unstructured sparsity.'
+    ),
+)
+group.add_argument(
+    '--n-sparsity',
+    type=int,
+    default=None,
+    metavar='N_SPARSITY',
+    help='The value of N in structured N:M sparsity (default=2).',
+)
+group.add_argument(
+    '--m-sparsity',
+    type=int,
+    default=None,
+    metavar='M_SPARSITY',
+    help='The value of M in structured N:M sparsity (default=4).',
+)
+group.add_argument(
+    '--prune-rate',
+    type=lambda x: restricted_float(x, 0.0, 1.0),
+    default=None,
+    metavar='PRUNE_RATE',
+    help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).',
+)
+                   help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).')
+# Rima
+
 
 # Optimizer parameters
 group = parser.add_argument_group('Optimizer parameters')
@@ -434,6 +496,12 @@ def main():
         bn_eps=args.bn_eps,
         scriptable=args.torchscript,
         checkpoint_path=args.initial_checkpoint,
+        # Amir: passing sparsity parameters
+        sparse_type=args.sparse_type,
+        n_sparsity=args.n_sparsity,
+        m_sparsity=args.m_sparsity,
+        prune_rate=args.prune_rate,
+        # Rima
     )
     if args.num_classes is None:
         assert hasattr(model, 'num_classes'), 'Model must have `num_classes` attr if not set on cmd line/config.'
