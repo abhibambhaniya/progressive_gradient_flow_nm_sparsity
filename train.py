@@ -488,12 +488,13 @@ def main():
         in_chans = args.input_size[0]
         
     # Amir
-    if SparseType[args.sparsity_type] == SparseType.STRUCTURED_NM:
-        if args.n_sparsity is None or args.m_sparsity is None:
-            raise ValueError("Both N and M must have an integer value for N:M structured sparsity.")
-    if SparseType[args.sparsity_type] == SparseType.UNSTRUCTURED:
-        if args.prune_rate is None:
-            raise ValueError("Prune rate must be (0.0, 1.0) for unstructured sparsity.")
+    if args.sparsity_type is not None:
+        if SparseType[args.sparsity_type] == SparseType.STRUCTURED_NM:
+            if args.n_sparsity is None or args.m_sparsity is None:
+                raise ValueError("Both N and M must have an integer value for N:M structured sparsity.")
+        if SparseType[args.sparsity_type] == SparseType.UNSTRUCTURED:
+            if args.prune_rate is None:
+                raise ValueError("Prune rate must be (0.0, 1.0) for unstructured sparsity.")
     # Rima
 
     model = create_model(
