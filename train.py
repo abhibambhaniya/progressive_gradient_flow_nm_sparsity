@@ -40,9 +40,6 @@ from timm.utils import ApexScaler, NativeScaler
 
 # Amir
 import enum
-import ruamel.yaml
-from ruamel.yaml import yaml_object
-yaml = ruamel.yaml.YAML()
 # Rima
 
 # Amir
