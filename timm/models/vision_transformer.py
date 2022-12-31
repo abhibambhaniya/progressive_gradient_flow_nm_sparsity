@@ -101,25 +101,40 @@ class Block(nn.Module):
             init_values=None,
             drop_path=0.,
             act_layer=nn.GELU,
-            norm_layer=nn.LayerNorm
+            norm_layer=nn.LayerNorm,
+            #Abhi
+            sparseConfig = None
+            #ibha
     ):
         super().__init__()
+        # Abhi
+        self.sparseConfig = sparseConfig
+        
+        # print(f"Abhi sparsity_type {self.sparsity_type}")
+        # print(f"Abhi n_sparsity {self.n_sparsity}")
+        # print(f"Abhi m_spasrity {self.m_spasrity}")
+        # print(f"Abhi prune_rate  {self.prune_rate}")
+        # Ihba
+
         self.norm1 = norm_layer(dim)
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         self.ls1 = LayerScale(dim, init_values=init_values) if init_values else nn.Identity()
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path1 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
+
         self.norm2 = norm_layer(dim)
-        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), act_layer=act_layer, drop=drop)
+        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), act_layer=act_layer, drop=drop, sparseConfig = self.sparseConfig)
         self.ls2 = LayerScale(dim, init_values=init_values) if init_values else nn.Identity()
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-    def forward(self, x):
+#Abhi
+    def forward(self, x,current_step = 0):
+        # print("current step",current_step)
         x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x))))
-        x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x))))
+        x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x),current_step=current_step)))
         return x
-
+#ihba
 
 class ResPostBlock(nn.Module):
 
@@ -246,10 +261,7 @@ class VisionTransformer(nn.Module):
             act_layer=None,
             block_fn=Block,
             # Amir: Added sparsity argument to Vision
-            sparsity_type=None,
-            n_sparsity=None,
-            m_sparsity=None,
-            prune_rate=None,
+            sparseConfig=None
             # Rima: Added sparsity argument to Vision
     ):
         """
@@ -274,10 +286,7 @@ class VisionTransformer(nn.Module):
             embed_layer (nn.Module): patch embedding layer
             norm_layer: (nn.Module): normalization layer
             act_layer: (nn.Module): MLP activation layer
-            sparsity_type: DENSE / STRUCTURED_NM / UNSTRUCTURED
-            n_sparsity: n value in N:M structured sparsity.
-            m_sparsity: m value in N:M structured sparsity.
-            prune_rate: prune rate in unstructured sparsity.
+            sparseConfig: configuration varibles for sprasity
         """
         super().__init__()
         assert global_pool in ('', 'avg', 'token')
@@ -294,10 +303,13 @@ class VisionTransformer(nn.Module):
         self.grad_checkpointing = False
         
         # Amir
-        self.sparsity_type = sparsity_type
-        self.n_sparsity = n_sparsity
-        self.m_spasrity = m_sparsity
-        self.prune_rate = prune_rate
+        self.sparseConfig = sparseConfig
+        self.current_step_num = 0
+        # self.sparsity_type = sparseConfig.sparsity_type
+        # self.n_sparsity = sparseConfig.n_sparsity
+        # self.m_spasrity = sparseConfig.m_sparsity
+        # self.prune_rate = sparseConfig.prune_rate
+        
         
         # print(f"AMIR sparsity_type {self.sparsity_type}")
         # print(f"AMIR n_sparsity {self.n_sparsity}")
@@ -332,7 +344,8 @@ class VisionTransformer(nn.Module):
                 attn_drop=attn_drop_rate,
                 drop_path=dpr[i],
                 norm_layer=norm_layer,
-                act_layer=act_layer
+                act_layer=act_layer,
+                sparseConfig = self.sparseConfig
             )
             for i in range(depth)])
         self.norm = norm_layer(embed_dim) if not use_fc_norm else nn.Identity()
@@ -405,10 +418,23 @@ class VisionTransformer(nn.Module):
         x = self.patch_embed(x)
         x = self._pos_embed(x)
         x = self.norm_pre(x)
+        # Abhi
         if self.grad_checkpointing and not torch.jit.is_scripting():
-            x = checkpoint_seq(self.blocks, x)
+            try:
+                for module in self.blocks.children():
+                    x = checkpoint_seq(module, x, current_step = self.current_step_num)
+            except:
+                print('cant find blocks with num step in if')
+                x = checkpoint_seq(self.blocks, x)
         else:
-            x = self.blocks(x)
+            try:
+                for module in self.blocks.children():
+                    x = module(x,current_step = self.current_step_num)
+            except:
+                print('cant find blocks with num step in else')
+                # print(self.blocks.children())
+                x = self.blocks(x)
+        # Ihba
         x = self.norm(x)
         return x
 
@@ -422,6 +448,12 @@ class VisionTransformer(nn.Module):
         x = self.forward_features(x)
         x = self.forward_head(x)
         return x
+
+    #ABHI
+    def update_step_num(self,step_num):
+        print("Updating step num in VIT Top to", step_num)
+        self.current_step_num = step_num
+    #ihba
 
 
 def init_weights_vit_timm(module: nn.Module, name: str = ''):

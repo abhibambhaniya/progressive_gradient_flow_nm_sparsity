@@ -6,28 +6,48 @@ from torch import nn as nn
 
 from .helpers import to_2tuple
 
+from ..sparse_pruning import sparse_functions as sf
 
 class Mlp(nn.Module):
     """ MLP as used in Vision Transformer, MLP-Mixer and related networks
     """
-    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, bias=True, drop=0.):
+##Abhi
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, bias=True, drop=0., sparseConfig=None):
         super().__init__()
+        self.sparseConfig=sparseConfig
+        self.sparsity_type = sparseConfig.sparsity_type
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
         bias = to_2tuple(bias)
         drop_probs = to_2tuple(drop)
 
-        self.fc1 = nn.Linear(in_features, hidden_features, bias=bias[0])
+        if self.sparsity_type is not None and self.sparsity_type is not 'Dense':
+            self.fc1 = sf.SparseLinear(in_features,hidden_features,bias=bias[0],sparseConfig=self.sparseConfig)
+        else:
+            self.fc1 = nn.Linear(in_features, hidden_features, bias=bias[0])
+
         self.act = act_layer()
         self.drop1 = nn.Dropout(drop_probs[0])
-        self.fc2 = nn.Linear(hidden_features, out_features, bias=bias[1])
+
+        if self.sparsity_type is not None and self.sparsity_type is not 'Dense':
+            self.fc2 = sf.SparseLinear(hidden_features, out_features, bias=bias[1],sparseConfig=self.sparseConfig)
+        else:
+            self.fc2 = nn.Linear(hidden_features, out_features, bias=bias[1])
+
         self.drop2 = nn.Dropout(drop_probs[1])
 
-    def forward(self, x):
-        x = self.fc1(x)
+    def forward(self, x,current_step=0):
+        try:
+            x = self.fc1(x,current_step_num=current_step)
+        except:
+            x = self.fc1(x)
         x = self.act(x)
         x = self.drop1(x)
-        x = self.fc2(x)
+        try:
+            x = self.fc2(x,current_step_num=current_step)
+        except:
+            x = self.fc2(x)
+##ibha 
         x = self.drop2(x)
         return x
 

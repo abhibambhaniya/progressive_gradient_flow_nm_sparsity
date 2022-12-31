@@ -52,6 +52,7 @@ class SparseType(str, enum.Enum):
   DENSE = 'DENSE'
   STRUCTURED_NM = 'STRUCTURED_NM'
   UNSTRUCTURED = 'UNSTRUCTURED'
+  SRSTE = 'SRSTE'
 
 def restricted_float(x, min_value, max_value):
     try:
@@ -63,6 +64,22 @@ def restricted_float(x, min_value, max_value):
         raise argparse.ArgumentTypeError("%r not in range (0.0, 1.0)"%(x,))
     return x
 # Rima
+#Abhi
+class DecayType(str,enum.Enum):
+    """Pruning decay type dataclass."""
+    STEP = 'STEP'
+    LINEAR = 'LINEAR'
+    EXP = 'EXP'
+
+class Sparstiy_Args:
+    n_sparsity = 2
+    m_sparsity = 4
+    sparsity_type = 'DENSE'
+    prune_rate = 0
+    decay_type = 'STEP'
+    decay_coef = 0.0002
+    structure_decay_flag = False 
+
 
 
 try:
@@ -212,7 +229,34 @@ group.add_argument(
     help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).',
 )
 # Rima
+# Abhi
+## Adding more arguments for sparsity configuration
+group.add_argument(
+    '--decay-type',
+    type=str,
+    default='STEP',
+    choices=list(DecayType),
+    metavar='DECAY_TYPE',
+    help='Define the type of decay for the mask. Permited values: STEP,LINEAR,EXP',
+)
 
+group.add_argument(
+    '--decay-coef',
+    type=float,
+    default=0.0002,
+    metavar='DECAY_COEF',
+    help='Coeffiecint to linearly/exponentially decay the sparse mask.'
+)
+
+group.add_argument(
+    '--structure-decay-flag',
+    type=bool,
+    default=False, 
+    metavar='STRUCTURE_DECAY_FLAG',
+    help='Enable uniform structure decay of mask from M-1:M to N:M.',
+)
+
+ ####
 
 # Optimizer parameters
 group = parser.add_argument_group('Optimizer parameters')
@@ -489,7 +533,7 @@ def main():
         
     # Amir
     if args.sparsity_type is not None:
-        if SparseType[args.sparsity_type] == SparseType.STRUCTURED_NM:
+        if SparseType[args.sparsity_type] == SparseType.STRUCTURED_NM or SparseType[args.sparsity_type] == SparseType.SRSTE :
             if args.n_sparsity is None or args.m_sparsity is None:
                 raise ValueError("Both N and M must have an integer value for N:M structured sparsity.")
         if SparseType[args.sparsity_type] == SparseType.UNSTRUCTURED:
@@ -497,6 +541,21 @@ def main():
                 raise ValueError("Prune rate must be (0.0, 1.0) for unstructured sparsity.")
     # Rima
 
+    # Abhi
+    ## Making a class object for all sparsity arguments
+    sparseConfig = Sparstiy_Args()
+
+    sparseConfig.sparsity_type=args.sparsity_type
+    sparseConfig.n_sparsity=args.n_sparsity
+    sparseConfig.m_sparsity=args.m_sparsity
+    if args.prune_rate is not None:
+        sparseConfig.prune_rate=args.prune_rate      
+    else:
+        sparseConfig.prune_rate=0.0
+    sparseConfig.decay_type = args.decay_type
+    sparseConfig.decay_coef = args.decay_coef
+    sparseConfig.structure_decay_flag = args.structure_decay_flag   
+    # Ibha
     model = create_model(
         args.model,
         pretrained=args.pretrained,
@@ -511,10 +570,7 @@ def main():
         scriptable=args.torchscript,
         checkpoint_path=args.initial_checkpoint,
         # Amir: passing sparsity parameters
-        sparsity_type=args.sparsity_type,
-        n_sparsity=args.n_sparsity,
-        m_sparsity=args.m_sparsity,
-        prune_rate=args.prune_rate,
+        sparseConfig=sparseConfig
         # Rima
     )
     if args.num_classes is None:
@@ -932,6 +988,13 @@ def train_one_epoch(
     last_idx = num_batches_per_epoch - 1
     num_updates = epoch * num_batches_per_epoch
     for batch_idx, (input, target) in enumerate(loader):
+    #Abhi
+    ## Passing the current step num to ViT Layers, needed for pruning mask reduction
+        try:
+            model.update_step_num(num_updates)
+        except:
+            continue
+    #ibha
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
         if not args.prefetcher:
@@ -940,7 +1003,6 @@ def train_one_epoch(
                 input, target = mixup_fn(input, target)
         if args.channels_last:
             input = input.contiguous(memory_format=torch.channels_last)
-
         with amp_autocast():
             output = model(input)
             loss = loss_fn(output, target)
@@ -970,7 +1032,8 @@ def train_one_epoch(
         if model_ema is not None:
             model_ema.update(model)
 
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
 
         num_updates += 1
         batch_time_m.update(time.time() - end)
@@ -1073,7 +1136,7 @@ def validate(
             else:
                 reduced_loss = loss.data
 
-            if device.type == 'cuda':
+            if device.type == 'cuda' and torch.cuda.is_available():
                 torch.cuda.synchronize()
 
             losses_m.update(reduced_loss.item(), input.size(0))
