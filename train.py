@@ -554,7 +554,8 @@ def main():
         sparseConfig.prune_rate=0.0
     sparseConfig.decay_type = args.decay_type
     sparseConfig.decay_coef = args.decay_coef
-    sparseConfig.structure_decay_flag = args.structure_decay_flag   
+    sparseConfig.structure_decay_flag = args.structure_decay_flag  
+    print(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(
         args.model,
