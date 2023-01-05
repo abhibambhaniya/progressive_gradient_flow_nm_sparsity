@@ -39,7 +39,9 @@ from timm.scheduler import create_scheduler_v2, scheduler_kwargs
 from timm.utils import ApexScaler, NativeScaler
 
 # Amir
+from dataclasses import dataclass
 import enum
+from pprint import pprint
 # Rima
 
 def __repr__(self):
@@ -71,6 +73,7 @@ class DecayType(str,enum.Enum):
     LINEAR = 'LINEAR'
     EXP = 'EXP'
 
+@dataclass
 class Sparstiy_Args:
     n_sparsity = 2
     m_sparsity = 4
@@ -555,7 +558,7 @@ def main():
     sparseConfig.decay_type = args.decay_type
     sparseConfig.decay_coef = args.decay_coef
     sparseConfig.structure_decay_flag = args.structure_decay_flag  
-    print(f"Sparsity configs: {sparseConfig}") 
+    pprint(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(
         args.model,
