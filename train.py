@@ -1000,7 +1000,7 @@ def train_one_epoch(
         try:
             model.update_step_num(num_updates)
         except:
-            continue
+            pass
     #ibha
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
