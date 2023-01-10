@@ -219,6 +219,7 @@ class SparseLinear(nn.Linear):
         self.M = sparseConfig.m_sparsity
         self.sparsity_rate = sparseConfig.prune_rate
 
+        print("Enabling sparsity type:",self.sparsity_type," , decay_type: ",self.decay_type,", Structure decay flag:",self.structure_decay_flag,", N:M=",self.N,self.M)
         ## Decay config params
         self.decay_coef = sparseConfig.decay_coef
         self.current_step_num = 0
@@ -291,7 +292,7 @@ class SparseLinear(nn.Linear):
 
     def forward(self, x, current_step_num = 0):
         self.current_step_num = current_step_num
-        # print("current step num:",current_step_num) 
+#         print("current step num:",current_step_num) 
         w = self.get_sparse_weights()
         x = F.linear(x, w)
         return x
