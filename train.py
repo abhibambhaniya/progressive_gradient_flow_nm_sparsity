@@ -999,8 +999,10 @@ def train_one_epoch(
     #Abhi
     ## Passing the current step num to ViT Layers, needed for pruning mask reduction
         try:
-            model.update_step_num(num_updates)
+            model.module.update_step_num(num_updates)
+#             print("current step num",num_updates)
         except:
+            print("cann't find model function for current step num",num_updates,", model name:",model.module)
             pass
     #ibha
         last_batch = batch_idx == last_idx
