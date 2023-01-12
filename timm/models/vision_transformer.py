@@ -451,7 +451,7 @@ class VisionTransformer(nn.Module):
 
     #ABHI
     def update_step_num(self,step_num):
-        print("Updating step num in VIT Top to", step_num)
+#         print("Updating step num in VIT Top to", step_num)
         self.current_step_num = step_num
     #ihba
 
