@@ -123,7 +123,8 @@ class LinearDecay(autograd.Function):
             mask_decay_value -
             (linear_decay_coef*current_step_num),
             0.0)
-        print("Linear mask decay value:", mask_decay_value )
+        if(current_step_num%1000==0):
+            print("Linear mask decay value:", mask_decay_value )
         # print(w_b)
         # plt.matshow(w_b.detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
         # plt.matshow(model.hidden1.get_sparse_weights().detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
@@ -164,7 +165,8 @@ class ExponentialDecay(autograd.Function):
         ctx.mask = w_b
         ctx.decay = 0.0002
         mask_decay_value = math.exp(-1*exp_decay_coef*current_step_num) 
-        print("Exponential Mask decay value:", mask_decay_value)
+        if(current_step_num%1000==0):
+            print("Exponential Mask decay value:", mask_decay_value)
         # print(w_b)
         # plt.matshow(w_b.detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
         # plt.matshow(model.hidden1.get_sparse_weights().detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
@@ -270,10 +272,10 @@ class SparseLinear(nn.Linear):
             return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate)
         else:
             if(self.structure_decay_config is not None):
-                if(self.current_epoch in self.structure_decay_config):
+                if(self.current_epoch in self.structure_decay_config ):
                     self.N =  int(self.structure_decay_config[self.current_epoch].split(':')[0])
                     self.M =  int(self.structure_decay_config[self.current_epoch].split(':')[1])
-                    print("Updating the weights to ",self.N,":",self.M)
+#                     print("Updating the weights to ",self.N,":",self.M)
 
             ## When doing fine tuning, the mask is binary (0,1)
             if(self.current_epoch > (self.total_epochs-self.fine_tune_epochs)):
