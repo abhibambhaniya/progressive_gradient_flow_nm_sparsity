@@ -21,17 +21,19 @@ class Mlp(nn.Module):
         bias = to_2tuple(bias)
         drop_probs = to_2tuple(drop)
 
-        if self.sparsity_type is not None and self.sparsity_type is not 'Dense':
+        if self.sparsity_type is not None and self.sparsity_type != 'DENSE':
             self.fc1 = sf.SparseLinear(in_features,hidden_features,bias=bias[0],sparseConfig=self.sparseConfig)
         else:
+            print("Dense linear")
             self.fc1 = nn.Linear(in_features, hidden_features, bias=bias[0])
 
         self.act = act_layer()
         self.drop1 = nn.Dropout(drop_probs[0])
 
-        if self.sparsity_type is not None and self.sparsity_type is not 'Dense':
+        if self.sparsity_type is not None and self.sparsity_type != 'DENSE':
             self.fc2 = sf.SparseLinear(hidden_features, out_features, bias=bias[1],sparseConfig=self.sparseConfig)
         else:
+            print("Dense linear")
             self.fc2 = nn.Linear(hidden_features, out_features, bias=bias[1])
 
         self.drop2 = nn.Dropout(drop_probs[1])
