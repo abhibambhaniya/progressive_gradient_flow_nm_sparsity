@@ -129,10 +129,10 @@ class Block(nn.Module):
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
 #Abhi
-    def forward(self, x,current_step = 0):
+    def forward(self, x,current_step = 0,current_epoch = 0):
         # print("current step",current_step)
         x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x))))
-        x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x),current_step=current_step)))
+        x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x),current_step=current_step,current_epoch=current_epoch)))
         return x
 #ihba
 
@@ -305,6 +305,7 @@ class VisionTransformer(nn.Module):
         # Amir
         self.sparseConfig = sparseConfig
         self.current_step_num = 0
+        self.current_epoch = 0
         # self.sparsity_type = sparseConfig.sparsity_type
         # self.n_sparsity = sparseConfig.n_sparsity
         # self.m_spasrity = sparseConfig.m_sparsity
@@ -422,14 +423,14 @@ class VisionTransformer(nn.Module):
         if self.grad_checkpointing and not torch.jit.is_scripting():
             try:
                 for module in self.blocks.children():
-                    x = checkpoint_seq(module, x, current_step = self.current_step_num)
+                    x = checkpoint_seq(module, x, current_step = self.current_step_num, current_epoch = self.current_epoch)
             except:
                 print('cant find blocks with num step in if')
                 x = checkpoint_seq(self.blocks, x)
         else:
             try:
                 for module in self.blocks.children():
-                    x = module(x,current_step = self.current_step_num)
+                    x = module(x,current_step = self.current_step_num, current_epoch = self.current_epoch)
             except:
                 print('cant find blocks with num step in else')
                 # print(self.blocks.children())
@@ -450,9 +451,10 @@ class VisionTransformer(nn.Module):
         return x
 
     #ABHI
-    def update_step_num(self,step_num):
+    def update_step_num(self,step_num,epoch):
 #         print("Updating step num in VIT Top to", step_num)
         self.current_step_num = step_num
+        self.current_epoch = epoch
     #ihba
 
 

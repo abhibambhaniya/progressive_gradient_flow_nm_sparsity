@@ -36,16 +36,16 @@ class Mlp(nn.Module):
 
         self.drop2 = nn.Dropout(drop_probs[1])
 
-    def forward(self, x, current_step=0):
+    def forward(self, x, current_step=0,current_epoch=0):
         try:
-            x = self.fc1(x,current_step_num=current_step)
+            x = self.fc1(x,current_step_num=current_step,current_epoch=current_epoch)
         except:
             x = self.fc1(x)
 #         x = self.fc1(x)
         x = self.act(x)
         x = self.drop1(x)
         try:
-            x = self.fc2(x,current_step_num=current_step)
+            x = self.fc2(x,current_step_num=current_step,current_epoch=current_epoch)
         except:
             x = self.fc2(x)
 #         x = self.fc2(x)

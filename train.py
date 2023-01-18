@@ -78,13 +78,17 @@ class Sparstiy_Args:
     prune_rate = 0
     decay_type = 'STEP'
     decay_coef = 0.0002
-    structure_decay_flag = False 
-    
+    structure_decay_flag = False
+    dense_epochs = 0
+    fine_tune_epochs = 100 
+    total_epochs = 0
+
     def __str__(self):
         a = f"N: {self.n_sparsity} | M: {self.m_sparsity} | Type: {self.sparsity_type}\n"
         b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type}\n"
-        c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag}"
-        return a + b + c
+        c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag}\n"
+        d = f"Dense epochs: {self.dense_epochs} | Fine tune epochs: {self.fine_tune_epochs} | total epochs: {self.total_epochs}. Distribution:{self.dense_epochs/self.total_epochs}:{(self.total_epochs-self.dense_epochs-self.fine_tune_epochs)/self.total_epochs}:{self.fine_tune_epochs/self.total_epochs}"
+        return a + b + c + d
 
 
 
@@ -261,6 +265,23 @@ group.add_argument(
     metavar='STRUCTURE_DECAY_FLAG',
     help='Enable uniform structure decay of mask from M-1:M to N:M.',
 )
+
+group.add_argument(
+    '--dense-steps',
+    type=bool,
+    default=False, 
+    metavar='DENSE_STEPS',
+    help='percentage of total steps that will be have dense training.',
+)
+
+group.add_argument(
+    '--fine-tune-steps',
+    type=bool,
+    default=False, 
+    metavar='FINE_TUNE_STEPS',
+    help='percentage of total steps that will be do fine tunning at the end.',
+)
+
 
  ####
 
@@ -560,7 +581,10 @@ def main():
         sparseConfig.prune_rate=0.0
     sparseConfig.decay_type = args.decay_type
     sparseConfig.decay_coef = args.decay_coef
-    sparseConfig.structure_decay_flag = args.structure_decay_flag  
+    sparseConfig.structure_decay_flag = args.structure_decay_flag 
+    sparseConfig.dense_epochs = int(args.dense_steps*args.epochs/100)         ## number of dense epoches
+    sparseConfig.fine_tune_epochs = int(args.fine_tune_steps*args.epochs/100)     ## Number of fine tune epoches
+    sparseConfig.total_epochs = args.epochs  
     print(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(
@@ -808,6 +832,9 @@ def main():
         pin_memory=args.pin_mem,
         device=device,
     )
+    ### model decelration ends
+
+
 
     # setup loss function
     if args.jsd_loss:
@@ -997,13 +1024,17 @@ def train_one_epoch(
     num_updates = epoch * num_batches_per_epoch
     for batch_idx, (input, target) in enumerate(loader):
     #Abhi
-    ## Passing the current step num to ViT Layers, needed for pruning mask reduction
+        current_step_num = num_updates - (num_batches_per_epoch*args.epochs*args.dense_steps/100)
+    ## Passing the current step num to ViT Layers, needed for pruning mask reduction. We are subtracting the step num of dense epochs
         try:
-            model.module.update_step_num(num_updates)
+            model.module.update_step_num(current_step_num,epoch)
 #             print("current step num",num_updates)
         except:
-            print("cann't find model function for current step num",num_updates,", model name:",model.module)
-            pass
+            try:
+               model.update_step_num(current_step_num,epoch) 
+            except:
+                print("cann't find model function for current step num",num_updates,", model name:",model.module)
+                pass
     #ibha
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
