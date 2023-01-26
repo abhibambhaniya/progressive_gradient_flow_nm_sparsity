@@ -5,7 +5,7 @@ amp_impl: native
 aot_autograd: false
 aug_repeats: 0
 aug_splits: 0
-batch_size: 256
+batch_size: 128
 bce_loss: true
 bce_target_thresh: null
 bn_eps: null
@@ -22,9 +22,9 @@ crop_pct: null
 cutmix: 0.0
 cutmix_minmax: null
 data: null
-data_dir: /tmp/sparsity_exps/
-dataset: torch/cifar10
-dataset_download: false
+data_dir: /usr/scratch/abhimanyu/sparsity_exps/imagenet
+dataset: torch/Imagenet
+dataset_download: true
 decay_epochs: 100
 decay_milestones:
 - 90

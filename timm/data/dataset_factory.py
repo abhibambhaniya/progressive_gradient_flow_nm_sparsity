@@ -105,7 +105,7 @@ def create_dataset(
     name = name.lower()
     if name.startswith('torch/'):
         name = name.split('/', 2)[-1]
-        torch_kwargs = dict(root=root, download=download, **kwargs)
+        torch_kwargs = dict(root=root,  **kwargs)
         if name in _TORCH_BASIC_DS:
             ds_class = _TORCH_BASIC_DS[name]
             use_train = split in _TRAIN_SYNONYM
@@ -139,6 +139,7 @@ def create_dataset(
             assert has_imagenet, 'Please update to a newer PyTorch and torchvision for ImageNet dataset.'
             if split in _EVAL_SYNONYM:
                 split = 'val'
+            print(f'kwargs: {torch_kwargs} ')
             ds = ImageNet(split=split, **torch_kwargs)
         elif name == 'image_folder' or name == 'folder':
             # in case torchvision ImageFolder is preferred over timm ImageDataset for some reason

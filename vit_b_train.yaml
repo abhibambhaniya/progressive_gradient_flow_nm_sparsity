@@ -25,7 +25,7 @@ data: null
 data_dir: /tmp/sparsity_exps/
 dataset: torch/cifar10
 dataset_download: false
-decay_epochs: 100
+decay_epochs: 40
 decay_milestones:
 - 90
 - 180
@@ -37,7 +37,7 @@ drop_block: null
 drop_connect: null
 drop_path: 0.1
 epoch_repeats: 0.0
-epochs: 300
+epochs: 100
 eval_metric: top1
 experiment: ''
 fast_norm: false
@@ -121,7 +121,7 @@ use_multi_epochs_loader: false
 val_split: validation
 validation_batch_size: null
 vflip: 0.0
-warmup_epochs: 30
+warmup_epochs: 10
 warmup_lr: 5.0e-07
 warmup_prefix: false
 weight_decay: 0.05
@@ -129,6 +129,9 @@ worker_seeding: all
 workers: 8
 n_sparsity: 2
 m_sparsity: 4 
-sparsity_type: SRSTE
-decay_type: exp
-decay_coef: 0.002
+sparsity_type: STRUCTURED_NM
+decay_type: linear
+decay_coef: 0.0008
+dense_steps: 1
+fine_tune_steps: 30
+structure_decay_flag: true
