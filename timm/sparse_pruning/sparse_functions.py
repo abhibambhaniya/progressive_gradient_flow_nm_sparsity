@@ -28,7 +28,7 @@ class SparseSRSTE(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase but pass the gradient to dense weight using SR-STE in the backwards phase"""
 
     @staticmethod
-    def forward(ctx, weight, N, M, sparsity_rate = 0.0, decay = 0.0002, isconv=False):
+    def forward(ctx, weight, N, M, sparsity_rate = 0.0, isconv=False, decay = 0.0002):
         ctx.save_for_backward(weight)
 
         output = weight.clone()
@@ -511,7 +511,7 @@ class SparseConv2D(nn.Conv2d):
             return self.weight
 
         if(self.sparsity_type.lower() == "srste"):
-            return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate, isconv=True)
+            return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate, True)
         else:
             if(self.structure_decay_config is not None):
                 if(self.current_epoch in self.structure_decay_config ):
@@ -525,11 +525,11 @@ class SparseConv2D(nn.Conv2d):
 
 
             if(self.decay_type.lower() == "step"):
-                return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, isconv=True)
+                return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, True)
             elif(self.decay_type.lower() == "linear"):
-                return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num), isconv=True)
+                return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num), True)
             elif(self.decay_type.lower() == "exp"):
-                return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num), isconv=True)
+                return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num), True)
             else:
                 print("decay type unidentified. Use on of the following: step,linear,exp.")
                 sys.exit(1)
