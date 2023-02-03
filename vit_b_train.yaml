@@ -24,7 +24,7 @@ cutmix_minmax: null
 data: null
 data_dir: /tmp/sparsity_exps/
 dataset: torch/cifar10
-dataset_download: false
+dataset_download: true
 decay_epochs: 40
 decay_milestones:
 - 90
@@ -87,7 +87,7 @@ num_classes: null
 opt: adamw
 opt_betas: null
 opt_eps: 1.0e-08
-output: vit_base_pretrain_timm_2022_12_25_11_26_PM
+output: vit_base_SRSTE_cifar
 patience_epochs: 10
 pin_mem: false
 pretrained: false
@@ -129,9 +129,9 @@ worker_seeding: all
 workers: 8
 n_sparsity: 2
 m_sparsity: 4 
-sparsity_type: STRUCTURED_NM
+sparsity_type: SRSTE
 decay_type: linear
 decay_coef: 0.0008
-dense_steps: 1
-fine_tune_steps: 30
-structure_decay_flag: true
+dense_steps: 0
+fine_tune_steps: 0
+structure_decay_flag: false
