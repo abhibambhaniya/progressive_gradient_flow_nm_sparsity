@@ -71,13 +71,6 @@ class DecayType(str,enum.Enum):
     LINEAR = 'LINEAR'
     EXP = 'EXP'
 
-class Sparsity_loc(str,enum.Enum):
-    """Pruning location dataclass."""
-    FF = 'FF'
-    Q = 'Q'
-    V = 'V'
-    K = 'K'
-
 class Sparstiy_Args:
     n_sparsity = 2
     m_sparsity = 4
@@ -296,7 +289,37 @@ group.add_argument(
     help='percentage of total steps that will be do fine tunning at the end.',
 )
 
+group.add_argument(
+    '--sparsity-loc',
+    type=str,
+    default=None,
+    metavar='SPARSITY_loc',
+    help=(
+        'Different location of sparsity: FF,Q,K,V. We can have multiple location. Ex, if we want K,Q,FF, then KQFF'
+    ),
+)
 
+group.add_argument(
+    '--n-sparsity-qkv',
+    type=int,
+    default=None,
+    metavar='N_SPARSITY_QKV',
+    help='The value of N in structured N:M sparsity (default=2).',
+)
+group.add_argument(
+    '--m-sparsity-qkv',
+    type=int,
+    default=None,
+    metavar='M_SPARSITY_QKV',
+    help='The value of M in structured N:M sparsity (default=4).',
+)
+group.add_argument(
+    '--prune-rate-qkv',
+    type=lambda x: restricted_float(x, 0.0, 1.0),
+    default=None,
+    metavar='PRUNE_RATE_QKV',
+    help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).',
+)
  ####
 
 # Optimizer parameters
@@ -598,7 +621,14 @@ def main():
     sparseConfig.structure_decay_flag = args.structure_decay_flag 
     sparseConfig.dense_epochs = int(args.dense_steps*args.epochs/100)         ## number of dense epoches
     sparseConfig.fine_tune_epochs = int(args.fine_tune_steps*args.epochs/100)     ## Number of fine tune epoches
-    sparseConfig.total_epochs = args.epochs  
+    sparseConfig.total_epochs = args.epochs 
+    sparseConfig.sparsity_loc = args.sparsity_loc
+    sparseConfig.n_sparsity_qkv=args.n_sparsity_qkv
+    sparseConfig.m_sparsity_qkv=args.m_sparsity_qkv
+    if args.prune_rate is not None:
+        sparseConfig.prune_rate_qkv=args.prune_rate_qkv     
+    else:
+        sparseConfig.prune_rate_qkv=0.0 
     print(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(

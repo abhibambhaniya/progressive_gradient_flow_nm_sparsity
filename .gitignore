@@ -119,3 +119,7 @@ Testing notebook.ipynb
 /*.png
 /*.zip
 /*.tar.*
+
+vit_base_pretrain_timm_2022_12_25_11_26_PM/
+vit_base_SRSTE_cifar/
+resnet50_cifar10/

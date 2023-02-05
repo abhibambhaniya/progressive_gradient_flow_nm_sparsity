@@ -323,25 +323,31 @@ class SparseLinear(nn.Linear):
 
 class SparseThreeLinears(nn.Module):
     def __init__(self, in_features, out_features, bias = False, sparseConfig = None,**kwargs):
-        super(SparseThreeLinears, self).__init__(in_features, out_features, bias = bias)
-        
+        super(SparseThreeLinears, self).__init__()
+
         sparseConfig.n_sparsity = sparseConfig.n_sparsity_qkv
         sparseConfig.m_sparsity = sparseConfig.m_sparsity_qkv
         sparseConfig.prune_rate = sparseConfig.prune_rate_qkv
 
         if 'Q' in sparseConfig.sparsity_loc:
-            self.q = SparseLinear(in_features,out_features//3 , sparseConfig)
+            self.q = SparseLinear(in_features,out_features//3 , sparseConfig = sparseConfig)
+            print("Sparse Q")
         else:
+            print("Dense Q")
             self.q = nn.Linear(in_features, out_features//3)
         
         if 'K' in sparseConfig.sparsity_loc:
-            self.k = SparseLinear(in_features,out_features//3 , sparseConfig)
+            self.k = SparseLinear(in_features,out_features//3 , sparseConfig = sparseConfig)
+            print("Sparse K")
         else:
+            print("Dense K")
             self.k = nn.Linear(in_features, out_features//3)
         
         if 'V' in sparseConfig.sparsity_loc:
-            self.v = SparseLinear(in_features,out_features//3 , sparseConfig)
+            self.v = SparseLinear(in_features,out_features//3 , sparseConfig = sparseConfig)
+            print("Sparse V")
         else:
+            print("Dense V")
             self.v = nn.Linear(in_features, out_features//3)
         
     def forward(self, x, current_step = 0,current_epoch=0):
