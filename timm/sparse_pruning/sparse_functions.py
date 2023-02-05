@@ -275,26 +275,10 @@ class SparseLinear(nn.Linear):
             print(self.structure_decay_config)
         else:
             self.structure_decay_config = None
-
-        ## To be implemented Custom structure decay schedule.
-        ### Structure decay config
-        ## Ex: - The (n-d-s) steps are divided into user config for [20=3:4,50=4:8, 70=1:4], For this config 
-        # from 20% of steps, 3:4 is followed, next, from 50% of steps, 4:8 is followed and 
-        # finally from 70% onwards, 1:8 is followed.
-        # if(sparseConfig.structure_decay_config is not None):
-        #     self.structure_decay_config = sparseConfig.structure_decay_config
-        # elif(self.structure_decay_flag == True):
-        #     num_sparse_frames = int(math.log2(self.M/self.N))
-        #     sparse_frame_size = (self.total_steps - self.dense_steps - self.fine_tune_steps) / num_sparse_frames
-        #     self.structure_decay_config = dict()
-        #     for i in range(num_sparse_frames):
-        #         self.structure_decay_config[int(self.dense_steps) + int(i*sparse_frame_size)]  = str((self.M-1) if (i == 0) else int(self.M/math.pow(2,i))) + ":" + str(self.M)
-        #     # print(self.structure_decay_config)
-        # else:
-        
+       
 
 
-        super(SparseLinear, self).__init__(in_features, out_features, bias = True)
+        super(SparseLinear, self).__init__(in_features, out_features, bias = bias)
 
 
     def get_sparse_weights(self):
@@ -337,102 +321,48 @@ class SparseLinear(nn.Linear):
 
 
 
+class SparseThreeLinears(nn.Module):
+    def __init__(self, in_features, out_features, bias = False, sparseConfig = None,**kwargs):
+        super(SparseThreeLinears, self).__init__(in_features, out_features, bias = bias)
+        
+        sparseConfig.n_sparsity = sparseConfig.n_sparsity_qkv
+        sparseConfig.m_sparsity = sparseConfig.m_sparsity_qkv
+        sparseConfig.prune_rate = sparseConfig.prune_rate_qkv
+
+        if 'Q' in sparseConfig.sparsity_loc:
+            self.q = SparseLinear(in_features,out_features//3 , sparseConfig)
+        else:
+            self.q = nn.Linear(in_features, out_features//3)
+        
+        if 'K' in sparseConfig.sparsity_loc:
+            self.k = SparseLinear(in_features,out_features//3 , sparseConfig)
+        else:
+            self.k = nn.Linear(in_features, out_features//3)
+        
+        if 'V' in sparseConfig.sparsity_loc:
+            self.v = SparseLinear(in_features,out_features//3 , sparseConfig)
+        else:
+            self.v = nn.Linear(in_features, out_features//3)
+        
+    def forward(self, x, current_step = 0,current_epoch=0):
+        try:
+            x1 = self.q(x,current_step_num=current_step,current_epoch=current_epoch)
+        except:
+            x1 = self.q(x)
+
+        try:
+            x2 = self.k(x,current_step_num=current_step,current_epoch=current_epoch)
+        except:
+            x2 = self.k(x)
+
+        try:
+            x3 = self.v(x,current_step_num=current_step,current_epoch=current_epoch)
+        except:
+            x3 = self.v(x)
+        return torch.cat([x1, x2, x3], dim=-1)
 
 
 # class SparseConv1D(nn.Conv1D):
-
-#     def __init__(self, in_features: int, out_features: int, bias: bool = True,
-#                  config = None,**kwargs):
-        
-#         ### Sparsity type
-#         ## SRSTE :- baseline implementation of SR-STE
-#         ## 
-        
-#         self.sparsity_type = config.sparsity_type
-#         ### Decay type
-#         ## Step :- For all steps enforce the "sparsity_type" for the whole matrix.
-#         ## Linear :- Linearly decay the mask value from 1 to 0, using the training step number and decay coeffecient.
-#         ##          Mask decay value = max(0, 1 - linear_decay_coef*(current_step_num-starting_step))
-#         ##
-#         ## Exp :- Exponentially decay the mask from 1 to 0, using training step and decay coefficients
-#         ##          Mask decay value = max(0, e^(-exp_decay_coef*(current_step_num-starting_step))
-#         ##
-#         self.decay_type = config.decay_type
-
-#         ## Structure_decay 
-#         # Flag to enable uniform structure decay to final N:M.
-#         ## For example, when target sparsity pattern is 1:16, we divide (n-d-s) 
-#         # steps to five equal time frame, and the sparsity pattern 
-#         # of each time frame is 15:16, 8:16, 4:16, 2:16, and 1:16, respectively.
-#         self.structure_decay_flag = config.structure_decay_flag
-
-#         ## Sparsity % for uniform sparsity
-#         self.N = config.n_sparsity
-#         self.M = config.m_sparsity
-#         self.sparsity_rate = config.unstructured_sparsity_rate
-
-#         ## Decay config params
-#         self.linear_decay_coef = config.linear_decay_coef
-#         self.exp_decay_coef = config.exp_decay_coef
-#         self.current_step_num = 0
-
-#         ## TBD, update these from real parameters in training run.
-#         self.dense_steps = 10
-#         self.fine_tune_steps = config.fine_tune_steps
-#         self.total_steps = 120
-
-
-#         ## To be implemented Custom structure decay schedule.
-#         ### Structure decay config
-#         ## Ex: - The (n-d-s) steps are divided into user config for [20=3:4,50=4:8, 70=1:4], For this config 
-#         # from 20% of steps, 3:4 is followed, next, from 50% of steps, 4:8 is followed and 
-#         # finally from 70% onwards, 1:8 is followed.
-#         if(config.structure_decay_config is not None):
-#             self.structure_decay_config = config.structure_decay_config
-#         else:
-#             self.structure_decay_config = None
-
-
-#         super(SparseConv1D, self).__init__(out_features, in_features)
-
-#     def get_sparse_weights(self):
-#         if(self.sparsity_type.lower() == "srste"):
-#             return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate)
-#         else:
-#             if(self.structure_decay_config is not None):
-#                 if(self.current_step_num in self.structure_decay_config):
-#                     self.N =  int(self.structure_decay_config[self.current_step_num].split(':')[0])
-#                     self.M =  int(self.structure_decay_config[self.current_step_num].split(':')[1])
-#                     print("Updating the weights to ",self.N,":",self.M)
-
-#             ## When doing fine tuning, the mask is binary (0,1)
-#             if(self.current_step_num > (self.total_steps-self.fine_tune_steps)):
-#                 self.decay_type = "Step"
-
-
-#             if(self.decay_type.lower() == "step"):
-#                 return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate)
-#             elif(self.decay_type.lower() == "linear"):
-#                 return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.linear_decay_coef,(self.current_step_num-self.dense_steps))
-#             elif(self.decay_type.lower() == "exp"):
-#                 return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.exp_decay_coef,(self.current_step_num-self.dense_steps))
-#             else:
-#                 print("decay type unidentified. Use on of the following: step,linear,exp.")
-#                 sys.exit(1)
-
-#     def update_global_step_num(self, start_step: int = 0, max_steps: int = 0):
-#         print("Updating dense steps to ", self.dense_steps, " and total_steps to ",self.total_steps)
-#         self.dense_steps = start_step
-#         self.total_steps = max_steps
-#         if(self.structure_decay_config is None and self.structure_decay_flag == True):
-#             num_sparse_frames = int(math.log2(self.M/self.N))
-#             sparse_frame_size = (self.total_steps - self.dense_steps - self.fine_tune_steps) / num_sparse_frames
-#             self.structure_decay_config = dict()
-#             for i in range(num_sparse_frames+1):
-#                 self.structure_decay_config[int(self.dense_steps) + int(i*sparse_frame_size)]  = str((self.M-1) if (i == 0) else int(self.M/math.pow(2,i))) + ":" + str(self.M)
-#             print(self.structure_decay_config)
-#         else:
-#             self.structure_decay_config = None
 
 #     def forward(self, x, current_step_num = 0):
 #         self.current_step_num = current_step_num

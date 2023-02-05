@@ -90,10 +90,16 @@ class Sparstiy_Args:
     fine_tune_epochs = 100 
     total_epochs = 0
     sparsity_loc = 'FF'
+    n_sparsity_qkv = 2
+    m_sparsity_qkv = 2
+    prune_rate_qkv = 0
 
     def __str__(self):
         a = f"N: {self.n_sparsity} | M: {self.m_sparsity} | Type: {self.sparsity_type}\n"
-        b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc}\n"
+        if("Q" in self.sparsity_loc or "V" in self.sparsity_loc or "K" in self.sparsity_loc):
+            b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc} | QKV rate : {self.n_sparsity_qkv}:{self.m_sparsity_qkv} , {self.prune_rate_qkv}\n"
+        else:
+            b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc}\n"
         c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag}\n"
         d = f"Dense epochs: {self.dense_epochs} | Fine tune epochs: {self.fine_tune_epochs} | total epochs: {self.total_epochs}. Distribution:{self.dense_epochs/self.total_epochs}:{(self.total_epochs-self.dense_epochs-self.fine_tune_epochs)/self.total_epochs}:{self.fine_tune_epochs/self.total_epochs}"
         return a + b + c + d
@@ -695,7 +701,7 @@ def main():
         if utils.is_primary(args):
             _logger.info('Using NVIDIA APEX AMP. Training in mixed precision.')
     elif use_amp == 'native':
-        amp_autocast = partial(torch.cpu.amp.autocast,  dtype=amp_dtype)
+        amp_autocast = partial(torch.autocast, device_type=device.type,  dtype=amp_dtype)
         if device.type == 'cuda':
             loss_scaler = NativeScaler()
         if utils.is_primary(args):

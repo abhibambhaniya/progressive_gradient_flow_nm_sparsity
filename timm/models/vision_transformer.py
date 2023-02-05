@@ -57,9 +57,13 @@ class Attention(nn.Module):
         self.num_heads = num_heads
         head_dim = dim // num_heads
         self.scale = head_dim ** -0.5
-
-        if self.sparsity_type is not None and self.sparsity_type != 'DENSE':
-            self.qkv = sf.SparseLinear(dim, dim * 3, bias=qkv_bias,sparseConfig=self.sparseConfig)
+        q_sparse = True if 'Q' in sparseConfig.sparsity_loc else False
+        v_sparse = True if 'K' in sparseConfig.sparsity_loc else False
+        k_sparse = True if 'V' in sparseConfig.sparsity_loc else False
+        
+        
+        if sparseConfig.sparsity_type is not None and sparseConfig.sparsity_type != 'DENSE' and q_sparse and v_sparse and k_sparse:
+            self.qkv = sf.SparseThreeLinears(dim, dim * 3, bias=qkv_bias,sparseConfig=sparseConfig)
         else:
             print("Dense qkv")
             self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
@@ -71,7 +75,11 @@ class Attention(nn.Module):
 
     def forward(self, x, current_step=0,current_epoch=0):
         B, N, C = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        try:
+            qkv = self.qkv(x,current_step=current_step,current_epoch=current_epoch).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        except:
+            qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+
         q, k, v = qkv.unbind(0)   # make torchscript happy (cannot use tensor as tuple)
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
