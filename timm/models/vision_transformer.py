@@ -42,7 +42,7 @@ from ._builder import build_model_with_cfg
 from ._manipulate import named_apply, checkpoint_seq, adapt_input_conv
 from ._pretrained import generate_default_cfgs
 from ._registry import register_model
-
+from ..sparse_pruning import sparse_functions as sf
 
 __all__ = ['VisionTransformer']  # model_registry will add each entrypoint fn to this
 
@@ -51,19 +51,25 @@ _logger = logging.getLogger(__name__)
 
 
 class Attention(nn.Module):
-    def __init__(self, dim, num_heads=8, qkv_bias=False, attn_drop=0., proj_drop=0.):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, attn_drop=0., proj_drop=0., sparseConfig=None):
         super().__init__()
         assert dim % num_heads == 0, 'dim should be divisible by num_heads'
         self.num_heads = num_heads
         head_dim = dim // num_heads
         self.scale = head_dim ** -0.5
 
-        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        if self.sparsity_type is not None and self.sparsity_type != 'DENSE':
+            self.qkv = sf.SparseLinear(dim, dim * 3, bias=qkv_bias,sparseConfig=self.sparseConfig)
+        else:
+            print("Dense qkv")
+            self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+
+        # self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x):
+    def forward(self, x, current_step=0,current_epoch=0):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv.unbind(0)   # make torchscript happy (cannot use tensor as tuple)
@@ -117,7 +123,7 @@ class Block(nn.Module):
         # Ihba
 
         self.norm1 = norm_layer(dim)
-        self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
+        self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop, sparseConfig = self.sparseConfig)
         self.ls1 = LayerScale(dim, init_values=init_values) if init_values else nn.Identity()
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path1 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -131,7 +137,7 @@ class Block(nn.Module):
 #Abhi
     def forward(self, x,current_step = 0,current_epoch = 0):
         # print("current step",current_step)
-        x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x))))
+        x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x),current_step=current_step,current_epoch=current_epoch)))
         x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x),current_step=current_step,current_epoch=current_epoch)))
         return x
 #ihba
