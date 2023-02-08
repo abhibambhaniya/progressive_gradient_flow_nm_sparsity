@@ -412,6 +412,9 @@ class Bottleneck(nn.Module):
             ):
         super(Bottleneck, self).__init__()
 
+        self.current_step_num = 0
+        self.current_epoch = 0
+
         width = int(math.floor(planes * (base_width / 64)) * cardinality)
         first_planes = width // reduce_first
         outplanes = planes * self.expansion
@@ -457,17 +460,25 @@ class Bottleneck(nn.Module):
     def zero_init_last(self):
         nn.init.zeros_(self.bn3.weight)
 
-    def forward(self, x,current_step = 0, current_epoch = 0):
+    #ABHI
+    def update_step_num(self,step_num,epoch):
+        # print("Updating step num in bottleneck block to", step_num)
+        self.current_step_num = step_num
+        self.current_epoch = epoch
+    #ihba
+
+    def forward(self, x):
         shortcut = x
         try:
-            x = self.conv1(x,current_step_num=current_step,current_epoch=current_epoch)
+            
+            x = self.conv1(x,current_step_num=self.current_step_num,current_epoch=self.current_epoch)
         except:
             x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)
 
         try:
-            x = self.conv2(x,current_step_num=current_step,current_epoch=current_epoch)
+            x = self.conv2(x,current_step_num=self.current_step_num,current_epoch=self.current_epoch)
         except:
             x = self.conv2(x)
         x = self.bn2(x)
@@ -476,7 +487,7 @@ class Bottleneck(nn.Module):
         x = self.aa(x)
 
         try:
-            x = self.conv3(x,current_step_num=current_step,current_epoch=current_epoch)
+            x = self.conv3(x,current_step_num=self.current_step_num,current_epoch=self.current_epoch)
         except:
             x = self.conv3(x)
         x = self.bn3(x)
@@ -686,9 +697,11 @@ class ResNet(nn.Module):
                     nn.Conv2d(stem_chs[1], inplanes, 3, stride=1, padding=1, bias=False)])
         else:
             if sparseConfig.sparsity_type is not None and sparseConfig.sparsity_type != 'DENSE':
-               self.conv1 = sf.SparseConv2D(in_chans, inplanes, kernel_size=7, stride=2, padding=3, bias=False,sparseConfig=self.sparseConfig) 
+                print("Sparse single conv2d in rn50 top")
+                self.conv1 = sf.SparseConv2D(in_chans, inplanes, kernel_size=7, stride=2, padding=3, bias=False,sparseConfig=self.sparseConfig) 
             else:
-               self.conv1 = nn.Conv2d(in_chans, inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+                print("Dense single conv2d in rn50 top")
+                self.conv1 = nn.Conv2d(in_chans, inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = norm_layer(inplanes)
         self.act1 = act_layer(inplace=True)
         self.feature_info = [dict(num_chs=inplanes, reduction=2, module='act1')]
@@ -767,8 +780,9 @@ class ResNet(nn.Module):
 
     def forward_features(self, x):
         try:
-            x = self.conv1(x, current_step = self.current_step_num, current_epoch = self.current_epoch)
+            x = self.conv1(x, current_step_num = self.current_step_num, current_epoch = self.current_epoch)
         except:
+            print("passing step in conv1 failed")
             x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)
@@ -776,7 +790,7 @@ class ResNet(nn.Module):
 
         if self.grad_checkpointing and not torch.jit.is_scripting():
             try:
-                x = checkpoint_seq([self.layer1, self.layer2, self.layer3, self.layer4], x, current_step = self.current_step_num, current_epoch = self.current_epoch, flatten=True)
+                x = checkpoint_seq([self.layer1, self.layer2, self.layer3, self.layer4], x, current_step_num = self.current_step_num, current_epoch = self.current_epoch, flatten=True)
             except:
                 x = checkpoint_seq([self.layer1, self.layer2, self.layer3, self.layer4], x, flatten=True)
         else:
@@ -784,6 +798,7 @@ class ResNet(nn.Module):
             x = self.layer2(x)
             x = self.layer3(x)
             x = self.layer4(x)
+
         return x
 
     def forward_head(self, x, pre_logits: bool = False):
@@ -799,9 +814,22 @@ class ResNet(nn.Module):
 
     #ABHI
     def update_step_num(self,step_num,epoch):
-#         print("Updating step num in VIT Top to", step_num)
+        # print("Updating step num in RN50 Top to", step_num)
         self.current_step_num = step_num
         self.current_epoch = epoch
+
+        try:
+            for block_layer in self.layer1:
+                block_layer.update_step_num(self.current_step_num,self.current_epoch)
+            for block_layer in self.layer2:
+                block_layer.update_step_num(self.current_step_num,self.current_epoch)
+            for block_layer in self.layer3:
+                block_layer.update_step_num(self.current_step_num,self.current_epoch)
+            for block_layer in self.layer4:
+                block_layer.update_step_num(self.current_step_num,self.current_epoch)
+            # self.layer1.modules.update_step_num(self.current_step_num,self.current_epoch)
+        except:
+            print("cann't find model function for current step num",self.current_step_num,", model name:",self.layer1.module)
     #ihba
 
 
