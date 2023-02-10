@@ -108,8 +108,8 @@ class StepDecay(autograd.Function):
 ## @amir, is this accurate? 
     @staticmethod
     def backward(ctx, grad_output):
-        weight, = ctx.saved_tensors
-        return grad_output * weight, None, None, None, None
+        # weight, = ctx.saved_tensors
+        return grad_output , None, None, None, None
 
 class LinearDecay(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase in a linear fashion but pass the default gradient to dense weight in the backwards phase"""
@@ -161,8 +161,8 @@ class LinearDecay(autograd.Function):
 ## @amir, is this accurate? 
     @staticmethod
     def backward(ctx, grad_output):
-        weight, = ctx.saved_tensors
-        return grad_output * weight, None, None, None, None, None, None
+        # weight, = ctx.saved_tensors
+        return grad_output , None, None, None, None, None, None
 
 
 class ExponentialDecay(autograd.Function):
@@ -211,8 +211,8 @@ class ExponentialDecay(autograd.Function):
 ## @amir, is this accurate? 
     @staticmethod
     def backward(ctx, grad_output):
-        weight, = ctx.saved_tensors
-        return grad_output * weight, None, None, None, None, None, None
+        # weight, = ctx.saved_tensors
+        return grad_output , None, None, None, None, None, None
 
 
 # decay function with linear,exponential,cosine decay. Training step as input, decay value as output.
