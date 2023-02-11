@@ -644,8 +644,14 @@ def main():
     if args.prune_rate is not None:
         sparseConfig.prune_rate_qkv=args.prune_rate_qkv     
     else:
-        sparseConfig.prune_rate_qkv=0.0 
-    sparseConfig.sparse_dim = args.sparse_dim
+        sparseConfig.prune_rate_qkv=0.0
+    if args.sparse_dim is not None:
+        if SparseDimType[args.sparse_dim] == SparseDimType.COL:
+            sparseConfig.sparse_dim = 1
+        elif SparseDimType[args.sparse_dim] == SparseDimType.ROW: 
+            sparseConfig.sparse_dim = 0
+        else:
+            raise ValueError("Sparse dimension, i.e. dimension along the sparse mask should be ROW or COL .")
     print(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(

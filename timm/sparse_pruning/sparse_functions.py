@@ -37,7 +37,7 @@ def get_sparse_mask(weight, N, M, sparsity_rate=0.0, isconv=False, sparse_dim = 
             w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
             w_b = w_b.scatter(dim=1, index=index, value=0)
             w_b = torch.t(w_b.reshape(weight.shape[1],weight.shape[0]))
-            print("mask:",w_b)
+            # print("mask:",w_b)
         else:                       ## Row-wise N:M sparse
             weight_temp = weight.detach().abs().reshape(group, M)
             index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
@@ -79,7 +79,7 @@ class SparseSRSTE(autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         weight, = ctx.saved_tensors
-        return grad_output + ctx.decay * (1-ctx.mask) * weight, None, None, None, None
+        return grad_output + ctx.decay * (1-ctx.mask) * weight, None, None, None, None, None
     
 # Rima
 
@@ -105,7 +105,7 @@ class StepDecay(autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         # weight, = ctx.saved_tensors
-        return grad_output , None, None, None, None
+        return grad_output , None, None, None, None, None
 
 class LinearDecay(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase in a linear fashion but pass the default gradient to dense weight in the backwards phase"""
@@ -139,7 +139,7 @@ class LinearDecay(autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         # weight, = ctx.saved_tensors
-        return grad_output , None, None, None, None, None, None
+        return grad_output , None, None, None, None, None, None, None
 
 
 class ExponentialDecay(autograd.Function):
@@ -170,7 +170,7 @@ class ExponentialDecay(autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         # weight, = ctx.saved_tensors
-        return grad_output , None, None, None, None, None, None
+        return grad_output , None, None, None, None, None, None, None
 
 
 # decay function with linear,exponential,cosine decay. Training step as input, decay value as output.
@@ -246,7 +246,7 @@ class SparseLinear(nn.Linear):
             return self.weight
 
         if(self.sparsity_type.lower() == "srste"):
-            return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate,sparse_dim=self.sparse_dim)
+            return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate,False,self.sparse_dim)
         else:
             if(self.structure_decay_config is not None):
                 if(self.current_epoch in self.structure_decay_config ):
@@ -260,11 +260,11 @@ class SparseLinear(nn.Linear):
 
 
             if(self.decay_type.lower() == "step"):
-                return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate,sparse_dim=self.sparse_dim)
+                return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate,False,self.sparse_dim)
             elif(self.decay_type.lower() == "linear"):
-                return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num),sparse_dim=self.sparse_dim)
+                return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num),False,self.sparse_dim)
             elif(self.decay_type.lower() == "exp"):
-                return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num),sparse_dim=self.sparse_dim)
+                return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num),False,self.sparse_dim)
             else:
                 print("decay type unidentified. Use on of the following: step,linear,exp.")
                 sys.exit(1)
