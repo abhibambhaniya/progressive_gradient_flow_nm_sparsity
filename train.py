@@ -71,6 +71,11 @@ class DecayType(str,enum.Enum):
     LINEAR = 'LINEAR'
     EXP = 'EXP'
 
+class SparseDimType(str,enum.Enum):
+    """Pruning dimension dataclass."""
+    ROW = 0
+    COL = 1
+
 class Sparstiy_Args:
     n_sparsity = 2
     m_sparsity = 4
@@ -86,6 +91,7 @@ class Sparstiy_Args:
     n_sparsity_qkv = 2
     m_sparsity_qkv = 2
     prune_rate_qkv = 0
+    sparse_dim = 0
 
     def __str__(self):
         a = f"N: {self.n_sparsity} | M: {self.m_sparsity} | Type: {self.sparsity_type}\n"
@@ -93,7 +99,7 @@ class Sparstiy_Args:
             b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc} | QKV rate : {self.n_sparsity_qkv}:{self.m_sparsity_qkv} , {self.prune_rate_qkv}\n"
         else:
             b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc}\n"
-        c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag}\n"
+        c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag} | Sparse Dim: {self.sparse_dim}\n"
         d = f"Dense epochs: {self.dense_epochs} | Fine tune epochs: {self.fine_tune_epochs} | total epochs: {self.total_epochs}. Distribution:{self.dense_epochs/self.total_epochs}:{(self.total_epochs-self.dense_epochs-self.fine_tune_epochs)/self.total_epochs}:{self.fine_tune_epochs/self.total_epochs}"
         return a + b + c + d
 
@@ -319,6 +325,15 @@ group.add_argument(
     default=None,
     metavar='PRUNE_RATE_QKV',
     help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).',
+)
+
+group.add_argument(
+    '--sparse-dim',
+    type=str,
+    default=0,
+    choices=list(SparseDimType),
+    metavar='SPARSE_DIM',
+    help='Define the type of sparse mask dimension. Permited values: ROW,COL',
 )
  ####
 
@@ -621,14 +636,16 @@ def main():
     sparseConfig.structure_decay_flag = args.structure_decay_flag 
     sparseConfig.dense_epochs = int(args.dense_steps*args.epochs/100)         ## number of dense epoches
     sparseConfig.fine_tune_epochs = int(args.fine_tune_steps*args.epochs/100)     ## Number of fine tune epoches
-    sparseConfig.total_epochs = args.epochs 
-    sparseConfig.sparsity_loc = args.sparsity_loc
+    sparseConfig.total_epochs = args.epochs
+    if args.sparsity_loc is not None: 
+        sparseConfig.sparsity_loc = args.sparsity_loc
     sparseConfig.n_sparsity_qkv=args.n_sparsity_qkv
     sparseConfig.m_sparsity_qkv=args.m_sparsity_qkv
     if args.prune_rate is not None:
         sparseConfig.prune_rate_qkv=args.prune_rate_qkv     
     else:
         sparseConfig.prune_rate_qkv=0.0 
+    sparseConfig.sparse_dim = args.sparse_dim
     print(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(

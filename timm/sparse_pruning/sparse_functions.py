@@ -14,10 +14,46 @@ import torch.nn.functional as F
 import torch
 import torch.utils.checkpoint
 from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import math
 import sys
 
+
+## Abhi
+
+def get_sparse_mask(weight, N, M, sparsity_rate=0.0, isconv=False, sparse_dim = 0):
+    length = weight.numel()
+        
+    if sparsity_rate > 0.0:
+        num_sparse = int((1.0 - sparsity_rate) * length)
+        M = length
+        N = num_sparse
+    
+    group = int(length/M)
+
+    if(isconv == False):
+        if(sparse_dim == 1):        ## Column wise N:M sparse
+            weight_temp = torch.transpose(weight,0,1).detach().abs().reshape(group, M)
+            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
+            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
+            w_b = w_b.scatter(dim=1, index=index, value=0)
+            w_b = torch.t(w_b.reshape(weight.shape[1],weight.shape[0]))
+            print("mask:",w_b)
+        else:                       ## Row-wise N:M sparse
+            weight_temp = weight.detach().abs().reshape(group, M)
+            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
+
+            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
+            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.shape)
+    else:
+        weight_temp = weight.detach().abs().permute(0,2,3,1).reshape(group, M)
+        index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
+
+        w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
+        w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.permute(0,2,3,1).shape)
+        w_b = w_b.permute(0,3,1,2)
+
+    return w_b
+## Ihba
 
 
 # Amir
@@ -28,33 +64,12 @@ class SparseSRSTE(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase but pass the gradient to dense weight using SR-STE in the backwards phase"""
 
     @staticmethod
-    def forward(ctx, weight, N, M, sparsity_rate = 0.0, isconv=False, decay = 0.0002):
+    def forward(ctx, weight, N, M, sparsity_rate = 0.0, isconv=False, sparse_dim = 0, decay = 0.0002):
         ctx.save_for_backward(weight)
 
         output = weight.clone()
-        length = weight.numel()
         
-        if sparsity_rate > 0.0:
-            num_sparse = int((1.0 - sparsity_rate) * length)
-            M = length
-            N = num_sparse
-        
-        group = int(length/M)
-
-        if(isconv == False):
-            weight_temp = weight.detach().abs().reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.shape)
-        else:
-            weight_temp = weight.detach().abs().permute(0,2,3,1).reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.permute(0,2,3,1).shape)
-            w_b = w_b.permute(0,3,1,2)
-
+        w_b = get_sparse_mask(weight,N,M,sparsity_rate,isconv,sparse_dim)
         ctx.mask = w_b
         ctx.decay = decay
 
@@ -73,32 +88,13 @@ class StepDecay(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase but pass the default gradient to dense weight in the backwards phase"""
 
     @staticmethod
-    def forward(ctx, weight, N, M, sparsity_rate = 0.0, isconv=False):
+    def forward(ctx, weight, N, M, sparsity_rate = 0.0,sparse_dim = 0, isconv=False):
         ctx.save_for_backward(weight)
 
         output = weight.clone()
-        length = weight.numel()
-        
-        if sparsity_rate > 0.0:
-            num_sparse = int((1.0 - sparsity_rate) * length)
-            M = length
-            N = num_sparse
-        
-        group = int(length/M)
 
-        if(isconv == False):
-            weight_temp = weight.detach().abs().reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
+        w_b = get_sparse_mask(weight,N,M,sparsity_rate,isconv,sparse_dim)
 
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.shape)
-        else:
-            weight_temp = weight.detach().abs().permute(0,2,3,1).reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.permute(0,2,3,1).shape)
-            w_b = w_b.permute(0,3,1,2)
         ctx.mask = w_b
         ctx.decay = 0.0002
         return output*w_b
@@ -115,32 +111,13 @@ class LinearDecay(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase in a linear fashion but pass the default gradient to dense weight in the backwards phase"""
 
     @staticmethod
-    def forward(ctx, weight, N, M, sparsity_rate = 0.0, linear_decay_coef = 0.01 ,current_step_num = 100, isconv=False):
+    def forward(ctx, weight, N, M, sparsity_rate = 0.0, linear_decay_coef = 0.01 ,current_step_num = 100, isconv=False, sparse_dim = 0):
         ctx.save_for_backward(weight)
 
         output = weight.clone()
-        length = weight.numel()
+
+        w_b = get_sparse_mask(weight,N,M,sparsity_rate,isconv,sparse_dim)
         
-        if sparsity_rate > 0.0:
-            num_sparse = int((1.0 - sparsity_rate) * length)
-            M = length
-            N = num_sparse
-        
-        group = int(length/M)
-
-        if(isconv == False):
-            weight_temp = weight.detach().abs().reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.shape)
-        else:
-            weight_temp = weight.detach().abs().permute(0,2,3,1).reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.permute(0,2,3,1).shape)
-            w_b = w_b.permute(0,3,1,2)
         ctx.mask = w_b
         ctx.decay = 0.0002
         mask_decay_value = 1.0
@@ -169,32 +146,13 @@ class ExponentialDecay(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase in a linear fashion but pass the default gradient to dense weight in the backwards phase"""
 
     @staticmethod
-    def forward(ctx, weight, N, M, sparsity_rate = 0.0, exp_decay_coef = 0.01 ,current_step_num = 100, isconv=False):
+    def forward(ctx, weight, N, M, sparsity_rate = 0.0, exp_decay_coef = 0.01 ,current_step_num = 100, isconv=False,sparse_dim = 0):
         ctx.save_for_backward(weight)
 
         output = weight.clone()
-        length = weight.numel()
+
+        w_b = get_sparse_mask(weight,N,M,sparsity_rate,isconv,sparse_dim)
         
-        if sparsity_rate > 0.0:
-            num_sparse = int((1.0 - sparsity_rate) * length)
-            M = length
-            N = num_sparse
-        
-        group = int(length/M)
-
-        if(isconv == False):
-            weight_temp = weight.detach().abs().reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.shape)
-        else:
-            weight_temp = weight.detach().abs().permute(0,2,3,1).reshape(group, M)
-            index = torch.argsort(weight_temp, dim=1)[:, :int(M-N)]
-
-            w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
-            w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.permute(0,2,3,1).shape)
-            w_b = w_b.permute(0,3,1,2)
         ctx.mask = w_b
         ctx.decay = 0.0002
         mask_decay_value = math.exp(-1*exp_decay_coef*current_step_num) 
@@ -254,6 +212,8 @@ class SparseLinear(nn.Linear):
         self.M = sparseConfig.m_sparsity
         self.sparsity_rate = sparseConfig.prune_rate
 
+        self.sparse_dim=sparseConfig.sparse_dim
+
         print("Enabling sparsity type:",self.sparsity_type," , decay_type: ",self.decay_type,", Structure decay flag:",self.structure_decay_flag,", N:M=",self.N,self.M)
         ## Decay config params
         self.decay_coef = sparseConfig.decay_coef
@@ -286,7 +246,7 @@ class SparseLinear(nn.Linear):
             return self.weight
 
         if(self.sparsity_type.lower() == "srste"):
-            return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate)
+            return SparseSRSTE.apply(self.weight, self.N, self.M, self.sparsity_rate,sparse_dim=self.sparse_dim)
         else:
             if(self.structure_decay_config is not None):
                 if(self.current_epoch in self.structure_decay_config ):
@@ -300,11 +260,11 @@ class SparseLinear(nn.Linear):
 
 
             if(self.decay_type.lower() == "step"):
-                return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate)
+                return StepDecay.apply(self.weight, self.N, self.M, self.sparsity_rate,sparse_dim=self.sparse_dim)
             elif(self.decay_type.lower() == "linear"):
-                return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num))
+                return LinearDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num),sparse_dim=self.sparse_dim)
             elif(self.decay_type.lower() == "exp"):
-                return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num))
+                return ExponentialDecay.apply(self.weight, self.N, self.M, self.sparsity_rate, self.decay_coef,(self.current_step_num),sparse_dim=self.sparse_dim)
             else:
                 print("decay type unidentified. Use on of the following: step,linear,exp.")
                 sys.exit(1)
