@@ -227,10 +227,10 @@ class SparseLinear(nn.Linear):
 
 
         if(self.structure_decay_flag == True):
-            num_sparse_frames = int(math.log2(self.M/self.N))
+            num_sparse_frames = int(math.log2(self.M/self.N)) + 1 
             sparse_frame_size = (self.total_epochs - self.dense_epochs - self.fine_tune_epochs) / num_sparse_frames
             self.structure_decay_config = dict()
-            for i in range(num_sparse_frames+1):
+            for i in range(num_sparse_frames):
                 self.structure_decay_config[int(self.dense_epochs) + int(i*sparse_frame_size)]  = str((self.M-1) if (i == 0) else int(self.M/math.pow(2,i))) + ":" + str(self.M)
             print(self.structure_decay_config)
         else:
