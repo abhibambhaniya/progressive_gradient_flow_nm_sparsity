@@ -28,6 +28,7 @@ from ._registry import register_model
 
 __all__ = ['SwinTransformerV2']  # model_registry will add each entrypoint fn to this
 
+from ..sparse_pruning import sparse_functions as sf
 
 def _cfg(url='', **kwargs):
     return {
@@ -263,12 +264,14 @@ class SwinTransformerBlock(nn.Module):
         act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
         pretrained_window_size (int): Window size in pretraining.
+        sparseConfig: configuration varibles for sprasity  
     """
 
     def __init__(
             self, dim, input_resolution, num_heads, window_size=7, shift_size=0,
             mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0., drop_path=0.,
-            act_layer=nn.GELU, norm_layer=nn.LayerNorm, pretrained_window_size=0):
+            act_layer=nn.GELU, norm_layer=nn.LayerNorm, pretrained_window_size=0,
+            sparseConfig = None):
         super().__init__()
         self.dim = dim
         self.input_resolution = to_2tuple(input_resolution)
@@ -278,6 +281,7 @@ class SwinTransformerBlock(nn.Module):
         self.shift_size: Tuple[int, int] = ss
         self.window_area = self.window_size[0] * self.window_size[1]
         self.mlp_ratio = mlp_ratio
+        self.sparseConfig = sparseConfig
 
         self.attn = WindowAttention(
             dim, window_size=to_2tuple(self.window_size), num_heads=num_heads,
@@ -286,7 +290,7 @@ class SwinTransformerBlock(nn.Module):
         self.norm1 = norm_layer(dim)
         self.drop_path1 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), act_layer=act_layer, drop=drop)
+        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), act_layer=act_layer, drop=drop, sparseConfig = self.sparseConfig)
         self.norm2 = norm_layer(dim)
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
@@ -353,9 +357,9 @@ class SwinTransformerBlock(nn.Module):
         x = x.view(B, H * W, C)
         return x
 
-    def forward(self, x):
-        x = x + self.drop_path1(self.norm1(self._attn(x)))
-        x = x + self.drop_path2(self.norm2(self.mlp(x)))
+    def forward(self, x, current_step_num, current_epoch):
+        x = x + self.drop_path1(self.norm1(self._attn(x, current_step_num, current_epoch)))
+        x = x + self.drop_path2(self.norm2(self.mlp(x, current_step_num, current_epoch)))
         return x
 
 
@@ -417,18 +421,21 @@ class BasicLayer(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer. Default: nn.LayerNorm
         downsample (nn.Module | None, optional): Downsample layer at the end of the layer. Default: None
         pretrained_window_size (int): Local window size in pre-training.
+        sparseConfig: configuration varibles for sprasity  
     """
 
     def __init__(
             self, dim, input_resolution, depth, num_heads, window_size,
             mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0., drop_path=0.,
-            norm_layer=nn.LayerNorm, downsample=None, pretrained_window_size=0):
+            norm_layer=nn.LayerNorm, downsample=None, pretrained_window_size=0,
+            sparseConfig = None):
 
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
         self.grad_checkpointing = False
+        self.sparseConfig = sparseConfig
 
         # build blocks
         self.blocks = nn.ModuleList([
@@ -441,7 +448,8 @@ class BasicLayer(nn.Module):
                 drop=drop, attn_drop=attn_drop,
                 drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
                 norm_layer=norm_layer,
-                pretrained_window_size=pretrained_window_size)
+                pretrained_window_size=pretrained_window_size,
+                sparseConfig = self.sparseConfig)
             for i in range(depth)])
 
         # patch merging layer
@@ -450,12 +458,18 @@ class BasicLayer(nn.Module):
         else:
             self.downsample = nn.Identity()
 
-    def forward(self, x):
+    def forward(self, x , current_step_num, current_epoch):
         for blk in self.blocks:
             if self.grad_checkpointing and not torch.jit.is_scripting():
-                x = checkpoint.checkpoint(blk, x)
+                try:
+                    x = checkpoint.checkpoint(blk, x, current_step_num, current_epoch)
+                except: 
+                    x = checkpoint.checkpoint(blk, x)
             else:
-                x = blk(x)
+                try:
+                    x = blk(x,current_step_num,current_epoch)
+                except:
+                    x = blk(x)
         x = self.downsample(x)
         return x
 
@@ -490,6 +504,7 @@ class SwinTransformerV2(nn.Module):
         patch_norm (bool): If True, add normalization after patch embedding. Default: True
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False
         pretrained_window_sizes (tuple(int)): Pretrained window sizes of each layer.
+        sparseConfig: configuration varibles for sprasity   
     """
 
     def __init__(
@@ -498,7 +513,11 @@ class SwinTransformerV2(nn.Module):
             window_size=7, mlp_ratio=4., qkv_bias=True,
             drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
             norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
-            pretrained_window_sizes=(0, 0, 0, 0), **kwargs):
+            pretrained_window_sizes=(0, 0, 0, 0),           
+            # Abhi: Added sparsity argument to Swin
+            sparseConfig=None,
+            # Ihba: Added sparsity argument to Swin
+            **kwargs):
         super().__init__()
 
         self.num_classes = num_classes
@@ -508,6 +527,12 @@ class SwinTransformerV2(nn.Module):
         self.embed_dim = embed_dim
         self.patch_norm = patch_norm
         self.num_features = int(embed_dim * 2 ** (self.num_layers - 1))
+
+        # Abhi
+        self.sparseConfig = sparseConfig
+        self.current_step_num = 0
+        self.current_epoch = 0
+        # Ihba
 
         # split image into non-overlapping patches
         self.patch_embed = PatchEmbed(
@@ -544,7 +569,8 @@ class SwinTransformerV2(nn.Module):
                 drop_path=dpr[sum(depths[:i_layer]):sum(depths[:i_layer + 1])],
                 norm_layer=norm_layer,
                 downsample=PatchMerging if (i_layer < self.num_layers - 1) else None,
-                pretrained_window_size=pretrained_window_sizes[i_layer]
+                pretrained_window_size=pretrained_window_sizes[i_layer],
+                sparseConfig = self.sparseConfig
             )
             self.layers.append(layer)
 
@@ -603,7 +629,10 @@ class SwinTransformerV2(nn.Module):
         x = self.pos_drop(x)
 
         for layer in self.layers:
-            x = layer(x)
+            try:
+                x = layer(x,self.current_step_num,self.current_epoch)
+            except:
+                x = layer(x)
 
         x = self.norm(x)  # B L C
         return x
@@ -617,6 +646,14 @@ class SwinTransformerV2(nn.Module):
         x = self.forward_features(x)
         x = self.forward_head(x)
         return x
+    
+    #ABHI
+    def update_step_num(self,step_num,epoch):
+#         print("Updating step num in SWIN Top to", step_num)
+        self.current_step_num = step_num
+        self.current_epoch = epoch
+    #ihba
+
 
 
 def checkpoint_filter_fn(state_dict, model):
