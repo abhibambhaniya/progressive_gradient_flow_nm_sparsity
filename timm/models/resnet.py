@@ -782,7 +782,7 @@ class ResNet(nn.Module):
         try:
             x = self.conv1(x, current_step_num = self.current_step_num, current_epoch = self.current_epoch)
         except:
-            print("passing step in conv1 failed")
+            # print("passing step in conv1 failed")
             x = self.conv1(x)
         x = self.bn1(x)
         x = self.act1(x)

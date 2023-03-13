@@ -71,6 +71,13 @@ class DecayType(str,enum.Enum):
     LINEAR = 'LINEAR'
     EXP = 'EXP'
 
+class StructureDecayType(str,enum.Enum):
+    SPARSIFY = 'SPARSIFY'       ##  Dense -> 7:8    -> 4:8  -> 2:8  -> 1:8
+    DENSIFY = 'DENSIFY'         ##  Dense -> 1:128  -> 1:32 -> 1:16 -> 1:8
+    FINE = 'FINE'               ##  Dense -> 16:128 -> 8:64 -> 4:32 -> 2:16 -> 1:8
+    CONFIG = 'CONFIG'           ##  Get a user defined config
+
+
 class SparseDimType(str,enum.Enum):
     """Pruning dimension dataclass."""
     ROW = 0
@@ -82,6 +89,8 @@ class Sparstiy_Args:
     sparsity_type = 'DENSE'
     prune_rate = 0
     decay_type = 'STEP'
+    structure_decay_type = 'SPARSIFY'
+    structure_decay_config = None
     decay_coef = 0.0002
     structure_decay_flag = False
     dense_epochs = 0
@@ -99,7 +108,7 @@ class Sparstiy_Args:
             b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc} | QKV rate : {self.n_sparsity_qkv}:{self.m_sparsity_qkv} , {self.prune_rate_qkv}\n"
         else:
             b = f"Prune Rate: {self.prune_rate} | Decay: {self.decay_type} | Location: {self.sparsity_loc}\n"
-        c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag} | Sparse Dim: {self.sparse_dim}\n"
+        c = f"Decay Coeff: {self.decay_coef} | Structure Decay: {self.structure_decay_flag} | Type: {self.structure_decay_type} | Sparse Dim: {self.sparse_dim}\n"
         d = f"Dense epochs: {self.dense_epochs} | Fine tune epochs: {self.fine_tune_epochs} | total epochs: {self.total_epochs}. Distribution:{self.dense_epochs/self.total_epochs}:{(self.total_epochs-self.dense_epochs-self.fine_tune_epochs)/self.total_epochs}:{self.fine_tune_epochs/self.total_epochs}"
         return a + b + c + d
 
@@ -279,6 +288,21 @@ group.add_argument(
     help='Enable uniform structure decay of mask from M-1:M to N:M.',
 )
 
+group.add_argument(
+    '--structure-decay-type',
+    type=str,
+    default='SPARSIFY',
+    choices=list(StructureDecayType),
+    metavar='STRUCTURE_DECAY_TYPE',
+    help='Define the type of decay for the structure decay. Permited values: SPARSIFY,DENSIFY,FINE,CONFIG',
+)
+group.add_argument(
+    '--structure-decay-config',
+    type=str,
+    default=None,
+    metavar='STRUCTURE_DECAY_CONFIG',
+    help='Define the custom decay for the structure decay. Format : [N1:M1,N2:M2,N3:M3,N4:M4]',
+)
 group.add_argument(
     '--dense-steps',
     type=bool,
@@ -634,6 +658,9 @@ def main():
     sparseConfig.decay_type = args.decay_type
     sparseConfig.decay_coef = args.decay_coef
     sparseConfig.structure_decay_flag = args.structure_decay_flag 
+    sparseConfig.structure_decay_type = args.structure_decay_type
+    sparseConfig.structure_decay_config = args.structure_decay_config
+    
     sparseConfig.dense_epochs = int(args.dense_steps*args.epochs/100)         ## number of dense epoches
     sparseConfig.fine_tune_epochs = int(args.fine_tune_steps*args.epochs/100)     ## Number of fine tune epoches
     sparseConfig.total_epochs = args.epochs
@@ -652,6 +679,7 @@ def main():
             sparseConfig.sparse_dim = 0
         else:
             raise ValueError("Sparse dimension, i.e. dimension along the sparse mask should be ROW or COL .")
+    
     print(f"Sparsity configs: {sparseConfig}") 
     # Ibha
     model = create_model(

@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch
 import torch.utils.checkpoint
 from torch import nn
+import numpy as np
 import math
 import sys
 
@@ -53,6 +54,44 @@ def get_sparse_mask(weight, N, M, sparsity_rate=0.0, isconv=False, sparse_dim = 
         w_b = w_b.permute(0,3,1,2)
 
     return w_b
+
+def get_decay_config(sparseConfig):
+    structure_decay_type =  sparseConfig.structure_decay_type.lower()
+    N = sparseConfig.n_sparsity
+    M = sparseConfig.m_sparsity
+    if(sparseConfig.structure_decay_flag == True):
+        if(structure_decay_type == "custom"):
+            if(sparseConfig.structure_decay_config is not None):
+                structure_decay_config = sparseConfig.structure_decay_config
+            else:
+                print("For custom structured sparse decay type, please also specify structure-decay-config. Format : [N1:M1,N2:M2,N3:M3,N4:M4]")
+                sys.exit(1) 
+        elif(structure_decay_type == "sparsify"):
+            num_sparse_frames = int(math.log2(M/N)) + 1
+            sparse_frame_size = (sparseConfig.total_epochs - sparseConfig.dense_epochs - sparseConfig.fine_tune_epochs) / num_sparse_frames
+            structure_decay_config = dict()
+            for i in range(num_sparse_frames):
+                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  = str((M-1) if (i == 0) else int(M/math.pow(2,i))) + ":" + str(M)
+        elif(structure_decay_type == "densify"):
+            num_sparse_frames = 4
+            sparse_frame_size = (sparseConfig.total_epochs - sparseConfig.dense_epochs - sparseConfig.fine_tune_epochs) / num_sparse_frames
+            structure_decay_config = dict()
+            for i in range(num_sparse_frames):
+                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  = "1:" + str(M*np.pow(2,4-i))
+        elif(structure_decay_type == "fine"):
+            num_sparse_frames = 4
+            sparse_frame_size = (sparseConfig.total_epochs - sparseConfig.dense_epochs - sparseConfig.fine_tune_epochs) / num_sparse_frames
+            structure_decay_config = dict()
+            for i in range(num_sparse_frames):
+                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  =  str(N*np.pow(2,4-i)) + ":" + str(M*np.pow(2,4-i))
+        else:
+            print("structured sparse decay type unidentified. Use on of the following: SPARSIFY,DENSIFY,FINE,CONFIG. For CONFIG please also specify structure-decay-config")
+            sys.exit(1)
+        print(structure_decay_config)
+    else:
+        structure_decay_config = None
+    
+    return structure_decay_config
 ## Ihba
 
 
@@ -226,18 +265,8 @@ class SparseLinear(nn.Linear):
         self.total_epochs = sparseConfig.total_epochs
 
 
-        if(self.structure_decay_flag == True):
-            num_sparse_frames = int(math.log2(self.M/self.N)) + 1 
-            sparse_frame_size = (self.total_epochs - self.dense_epochs - self.fine_tune_epochs) / num_sparse_frames
-            self.structure_decay_config = dict()
-            for i in range(num_sparse_frames):
-                self.structure_decay_config[int(self.dense_epochs) + int(i*sparse_frame_size)]  = str((self.M-1) if (i == 0) else int(self.M/math.pow(2,i))) + ":" + str(self.M)
-            print(self.structure_decay_config)
-        else:
-            self.structure_decay_config = None
-       
-
-
+        self.structure_decay_config = get_decay_config(sparseConfig)
+    
         super(SparseLinear, self).__init__(in_features, out_features, bias = bias)
 
 
@@ -350,11 +379,10 @@ class SparseConv2D(nn.Conv2d):
         ##  STRUCTURED_NM = 'STRUCTURED_NM'
         ##  UNSTRUCTURED = 'UNSTRUCTURED'
         ##  SRSTE = 'SRSTE'
-
-
-
-
         self.sparsity_type = sparseConfig.sparsity_type
+
+
+
         ### Decay type
         ## Step :- For all steps enforce the "sparsity_type" for the whole matrix.
         ## Linear :- Linearly decay the mask value from 1 to 0, using the training step number and decay coeffecient.
@@ -388,16 +416,8 @@ class SparseConv2D(nn.Conv2d):
         self.fine_tune_epochs = sparseConfig.fine_tune_epochs
         self.total_epochs = sparseConfig.total_epochs
 
-
-        if(self.structure_decay_flag == True):
-            num_sparse_frames = int(math.log2(self.M/self.N))
-            sparse_frame_size = (self.total_epochs - self.dense_epochs - self.fine_tune_epochs) / num_sparse_frames
-            self.structure_decay_config = dict()
-            for i in range(num_sparse_frames+1):
-                self.structure_decay_config[int(self.dense_epochs) + int(i*sparse_frame_size)]  = str((self.M-1) if (i == 0) else int(self.M/math.pow(2,i))) + ":" + str(self.M)
-            print(self.structure_decay_config)
-        else:
-            self.structure_decay_config = None
+        self.structure_decay_config = get_decay_config(sparseConfig)
+        
 
 
         super(SparseConv2D, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode, **kwargs)
