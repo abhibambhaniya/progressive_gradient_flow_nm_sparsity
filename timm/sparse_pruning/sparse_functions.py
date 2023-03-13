@@ -77,13 +77,13 @@ def get_decay_config(sparseConfig):
             sparse_frame_size = (sparseConfig.total_epochs - sparseConfig.dense_epochs - sparseConfig.fine_tune_epochs) / num_sparse_frames
             structure_decay_config = dict()
             for i in range(num_sparse_frames):
-                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  = "1:" + str(M*np.pow(2,4-i))
+                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  = str(N) + ":" + str(int(M*math.pow(2,num_sparse_frames-i-1)))
         elif(structure_decay_type == "fine"):
             num_sparse_frames = 4
             sparse_frame_size = (sparseConfig.total_epochs - sparseConfig.dense_epochs - sparseConfig.fine_tune_epochs) / num_sparse_frames
             structure_decay_config = dict()
             for i in range(num_sparse_frames):
-                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  =  str(N*np.pow(2,4-i)) + ":" + str(M*np.pow(2,4-i))
+                structure_decay_config[int(sparseConfig.dense_epochs) + int(i*sparse_frame_size)]  =  str(int(N*math.pow(2,num_sparse_frames-i-1))) + ":" + str(int(M*math.pow(2,num_sparse_frames-i-1)))
         else:
             print("structured sparse decay type unidentified. Use on of the following: SPARSIFY,DENSIFY,FINE,CONFIG. For CONFIG please also specify structure-decay-config")
             sys.exit(1)
