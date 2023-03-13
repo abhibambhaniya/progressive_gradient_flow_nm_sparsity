@@ -330,7 +330,7 @@ group.add_argument(
 group.add_argument(
     '--sparse-dim',
     type=str,
-    default=0,
+    default=None,
     choices=list(SparseDimType),
     metavar='SPARSE_DIM',
     help='Define the type of sparse mask dimension. Permited values: ROW,COL',
