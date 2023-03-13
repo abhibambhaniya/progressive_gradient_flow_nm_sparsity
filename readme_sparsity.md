@@ -5,7 +5,7 @@
 
 ## Introduction
 
-The repo has been forked from huggingface's pytorch image models repo(https://github.com/rwightman/pytorch-image-models). 
+The repo has been forked from huggingface's pytorch image models [**repo**](https://github.com/rwightman/pytorch-image-models). 
 We have implemented various different techniques to structured sparsification to the repo.
 
 Currently we have following models with sparsity
