@@ -47,7 +47,7 @@ To enable sparsity add appropriate parameters to the config file.
 ## Authors
 Abhimanyu Bambhaniya(abambhaniya3@gatech.edu)
 
-Amir Yazdanbhaksh(ayazdan@google.com)
+Amir Yazdanbaksh(ayazdan@google.com)
 
 
 
