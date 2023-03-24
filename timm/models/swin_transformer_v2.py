@@ -143,7 +143,7 @@ class WindowAttention(nn.Module):
 
     def __init__(
             self, dim, window_size, num_heads, qkv_bias=True, attn_drop=0., proj_drop=0.,
-            pretrained_window_size=[0, 0]):
+            pretrained_window_size=[0, 0], sparseConfig = None):
 
         super().__init__()
         self.dim = dim
@@ -191,7 +191,16 @@ class WindowAttention(nn.Module):
         relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
         self.register_buffer("relative_position_index", relative_position_index, persistent=False)
 
-        self.qkv = nn.Linear(dim, dim * 3, bias=False)
+        q_sparse = True if 'Q' in sparseConfig.sparsity_loc else False
+        v_sparse = True if 'K' in sparseConfig.sparsity_loc else False
+        k_sparse = True if 'V' in sparseConfig.sparsity_loc else False
+        
+        
+        if sparseConfig.sparsity_type is not None and sparseConfig.sparsity_type != 'DENSE' and (q_sparse or v_sparse or k_sparse):
+            self.qkv = sf.SparseThreeLinears(dim, dim * 3, bias=False,sparseConfig=sparseConfig)
+        else:
+            print("Dense qkv")
+            self.qkv = nn.Linear(dim, dim * 3, bias=False)
         if qkv_bias:
             self.q_bias = nn.Parameter(torch.zeros(dim))
             self.register_buffer('k_bias', torch.zeros(dim), persistent=False)
@@ -215,10 +224,14 @@ class WindowAttention(nn.Module):
         qkv_bias = None
         if self.q_bias is not None:
             qkv_bias = torch.cat((self.q_bias, self.k_bias, self.v_bias))
-        qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
+        try:
+            qkv = F.linear(input=x, weight=self.qkv.get_weights(), bias=qkv_bias)
+        except:
+            qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
         qkv = qkv.reshape(B_, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
         q, k, v = qkv.unbind(0)
-
+        # print(q.shape,k.shape,v.shape)
+        # print(self.qkv.weight.shape, self.qkv1.get_weights().shape )
         # cosine attention
         attn = (F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1))
         logit_scale = torch.clamp(self.logit_scale, max=math.log(1. / 0.01)).exp()
@@ -286,7 +299,7 @@ class SwinTransformerBlock(nn.Module):
         self.attn = WindowAttention(
             dim, window_size=to_2tuple(self.window_size), num_heads=num_heads,
             qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop,
-            pretrained_window_size=to_2tuple(pretrained_window_size))
+            pretrained_window_size=to_2tuple(pretrained_window_size), sparseConfig=self.sparseConfig)
         self.norm1 = norm_layer(dim)
         self.drop_path1 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
@@ -436,7 +449,7 @@ class BasicLayer(nn.Module):
         self.depth = depth
         self.grad_checkpointing = False
         self.sparseConfig = sparseConfig
-
+        
         # build blocks
         self.blocks = nn.ModuleList([
             SwinTransformerBlock(
@@ -532,6 +545,7 @@ class SwinTransformerV2(nn.Module):
         self.sparseConfig = sparseConfig
         self.current_step_num = 0
         self.current_epoch = 0
+        # print(sparseConfig)
         # Ihba
 
         # split image into non-overlapping patches
@@ -570,7 +584,7 @@ class SwinTransformerV2(nn.Module):
                 norm_layer=norm_layer,
                 downsample=PatchMerging if (i_layer < self.num_layers - 1) else None,
                 pretrained_window_size=pretrained_window_sizes[i_layer],
-                sparseConfig = self.sparseConfig
+                sparseConfig = sparseConfig
             )
             self.layers.append(layer)
 
