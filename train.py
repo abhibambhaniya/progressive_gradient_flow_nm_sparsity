@@ -38,6 +38,8 @@ from timm.optim import create_optimizer_v2, optimizer_kwargs
 from timm.scheduler import create_scheduler_v2, scheduler_kwargs
 from timm.utils import ApexScaler, NativeScaler
 
+
+
 # Amir
 import enum
 # Rima
@@ -242,14 +244,14 @@ group.add_argument(
 group.add_argument(
     '--n-sparsity',
     type=int,
-    default=None,
+    default=2,
     metavar='N_SPARSITY',
     help='The value of N in structured N:M sparsity (default=2).',
 )
 group.add_argument(
     '--m-sparsity',
     type=int,
-    default=None,
+    default=4,
     metavar='M_SPARSITY',
     help='The value of M in structured N:M sparsity (default=4).',
 )
@@ -305,16 +307,16 @@ group.add_argument(
 )
 group.add_argument(
     '--dense-steps',
-    type=bool,
-    default=False, 
+    type=lambda x: restricted_float(x, 0.0, 1.0),
+    default=0.0, 
     metavar='DENSE_STEPS',
     help='percentage of total steps that will be have dense training.',
 )
 
 group.add_argument(
     '--fine-tune-steps',
-    type=bool,
-    default=False, 
+    type=lambda x: restricted_float(x, 0.0, 1.0),
+    default=0.0, 
     metavar='FINE_TUNE_STEPS',
     help='percentage of total steps that will be do fine tunning at the end.',
 )
@@ -332,14 +334,14 @@ group.add_argument(
 group.add_argument(
     '--n-sparsity-qkv',
     type=int,
-    default=None,
+    default=2,
     metavar='N_SPARSITY_QKV',
     help='The value of N in structured N:M sparsity (default=2).',
 )
 group.add_argument(
     '--m-sparsity-qkv',
     type=int,
-    default=None,
+    default=4,
     metavar='M_SPARSITY_QKV',
     help='The value of M in structured N:M sparsity (default=4).',
 )
@@ -580,11 +582,13 @@ def _parse_args():
 
 def main():
     utils.setup_default_logging()
+    
     args, args_text = _parse_args()
 
     if torch.cuda.is_available():
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.benchmark = True
+        # torch.cuda.empty_cache()
 
     if args.data and not args.data_dir:
         args.data_dir = args.data
