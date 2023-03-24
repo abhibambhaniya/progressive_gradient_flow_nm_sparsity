@@ -325,7 +325,7 @@ class SwinTransformerBlock(nn.Module):
         shift_size = [0 if r <= w else s for r, w, s in zip(self.input_resolution, window_size, target_shift_size)]
         return tuple(window_size), tuple(shift_size)
 
-    def _attn(self, x):
+    def _attn(self, x, current_step_num, current_epoch):
         H, W = self.input_resolution
         B, L, C = x.shape
         _assert(L == H * W, "input feature has wrong size")
