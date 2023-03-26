@@ -665,8 +665,8 @@ def main():
     sparseConfig.structure_decay_type = args.structure_decay_type
     sparseConfig.structure_decay_config = args.structure_decay_config
     
-    sparseConfig.dense_epochs = int(args.dense_steps*args.epochs/100)         ## number of dense epoches
-    sparseConfig.fine_tune_epochs = int(args.fine_tune_steps*args.epochs/100)     ## Number of fine tune epoches
+    sparseConfig.dense_epochs = int(args.dense_steps*args.epochs)         ## number of dense epoches
+    sparseConfig.fine_tune_epochs = int(args.fine_tune_steps*args.epochs)     ## Number of fine tune epoches
     sparseConfig.total_epochs = args.epochs
     if args.sparsity_loc is not None: 
         sparseConfig.sparsity_loc = args.sparsity_loc

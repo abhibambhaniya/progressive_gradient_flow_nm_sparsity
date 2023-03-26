@@ -25,7 +25,7 @@ To enable sparsity add appropriate parameters to the config file.
 * Structure Decay Flag : This boolean config enables to structure decay of the sparsity pattern. (true,false)
 * Structure Decay Type : For structure decay, there are 4 type of decay possible, i.e. 
     * sparsify (  Dense -> 7:8    -> 4:8  -> 2:8  -> 1:8 )
-    * densify ( Dense -> 1:128  -> 1:32 -> 1:16 -> 1:8 )
+    * densify ( Dense -> 1:128  -> 1:64 -> 1:32 -> 1:16 -> 1:8 )
     * fine (  Dense -> 16:128 -> 8:64 -> 4:32 -> 2:16 -> 1:8 )
     * custom ( user defined )
 * Structure Decay Config : This is user defined config for custom structure decay. ([n1:m1,n2:m2,n3:m3])
