@@ -356,6 +356,8 @@ class SparseThreeLinears(nn.Module):
             x3 = self.v(x)
         return torch.cat([x1, x2, x3], dim=-1)
 
+    def get_weights(self):
+        return torch.cat((self.q.weight, self.k.weight, self.v.weight))
 
 # class SparseConv1D(nn.Conv1D):
 
