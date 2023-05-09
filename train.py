@@ -37,6 +37,7 @@ from timm.models import create_model, safe_model_name, resume_checkpoint, load_c
 from timm.optim import create_optimizer_v2, optimizer_kwargs
 from timm.scheduler import create_scheduler_v2, scheduler_kwargs
 from timm.utils import ApexScaler, NativeScaler
+from timm.utils import Update_model_stats
 
 
 
@@ -1204,6 +1205,15 @@ def train_one_epoch(
                         data_time=data_time_m)
                 )
 
+                    
+               ## ABHI
+                Update_model_stats(
+                    current_step_num,
+                    model,
+                    args,
+                    filename=os.path.join(output_dir, 'model_stats.csv'),
+                )
+                ## IHBA
                 if args.save_images and output_dir:
                     torchvision.utils.save_image(
                         input,
