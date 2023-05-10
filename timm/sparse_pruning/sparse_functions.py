@@ -308,6 +308,8 @@ class SparseLinear(nn.Linear):
         x = F.linear(x, w)
         return x
 
+    def __return_sparse_weights__(self):
+        return self.get_sparse_weights() 
 
 
 class SparseThreeLinears(nn.Module):
@@ -317,6 +319,7 @@ class SparseThreeLinears(nn.Module):
         sparseConfig.n_sparsity = sparseConfig.n_sparsity_qkv
         sparseConfig.m_sparsity = sparseConfig.m_sparsity_qkv
         sparseConfig.prune_rate = sparseConfig.prune_rate_qkv
+        self.sparseConfig = sparseConfig
 
         if 'Q' in sparseConfig.sparsity_loc:
             self.q = SparseLinear(in_features,out_features//3 , sparseConfig = sparseConfig)
@@ -357,7 +360,21 @@ class SparseThreeLinears(nn.Module):
         return torch.cat([x1, x2, x3], dim=-1)
 
     def get_weights(self):
-        return torch.cat((self.q.get_sparse_weights(), self.k.get_sparse_weights(), self.v.get_sparse_weights()))
+        if 'Q' in self.sparseConfig.sparsity_loc:
+            q_weight = self.q.__return_sparse_weights__()
+        else:
+            q_weight = self.q.weight
+        
+        if 'K' in self.sparseConfig.sparsity_loc:
+            k_weight = self.k.__return_sparse_weights__()
+        else:
+            k_weight = self.k.weight
+        
+        if 'V' in self.sparseConfig.sparsity_loc:
+            v_weight = self.v.__return_sparse_weights__()
+        else:
+            v_weight = self.v.weight 
+        return torch.cat((q_weight,k_weight,v_weight))
 
 # class SparseConv1D(nn.Conv1D):
 
