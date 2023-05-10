@@ -192,8 +192,8 @@ class WindowAttention(nn.Module):
         self.register_buffer("relative_position_index", relative_position_index, persistent=False)
 
         q_sparse = True if 'Q' in sparseConfig.sparsity_loc else False
-        v_sparse = True if 'K' in sparseConfig.sparsity_loc else False
-        k_sparse = True if 'V' in sparseConfig.sparsity_loc else False
+        v_sparse = True if 'V' in sparseConfig.sparsity_loc else False
+        k_sparse = True if 'K' in sparseConfig.sparsity_loc else False
         
         
         if sparseConfig.sparsity_type is not None and sparseConfig.sparsity_type != 'DENSE' and (q_sparse or v_sparse or k_sparse):
