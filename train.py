@@ -1215,13 +1215,24 @@ def train_one_epoch(
                     
                 ## ABHI
                 
-                Update_model_stats(
-                    current_step_num,
-                    model,
-                    args,
-                    filename=os.path.join(output_dir, 'model_stats.csv'),
-                    prev_weights=prev_weights)
+                # Update_model_stats(
+                #     current_step_num,
+                #     model,
+                #     args,
+                #     loss.data,
+                #     filename=os.path.join(output_dir, 'model_stats.csv'),
+                #     prev_weights=prev_weights)
 
+                
+                # Save model weights and gradients
+                state = {'step': int(current_step_num+1), 'loss': loss.data.cpu().numpy()}
+                for name, param in model.named_parameters():
+                    if param.requires_grad and param.grad is not None and 'fc' in name and 'weight' in name:
+                        state.update({name: param})
+                        state.update({f'{name}_grad': param.grad})
+
+                file_path = os.path.join(output_dir, f'tiny_vit_weights_grad_step_{int(current_step_num+1)}.pt')
+                torch.save(state, file_path)
                 ## IHBA              
                 if args.save_images and output_dir:
                     torchvision.utils.save_image(
