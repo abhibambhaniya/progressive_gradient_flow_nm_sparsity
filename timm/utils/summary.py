@@ -51,7 +51,7 @@ def update_summary(
         dw.writerow(rowd)
 
 ## Abhi
-def get_sparse_weights(weight,N=2,M=4):
+def get_sparse_weights(weight,N=2,M=4, get_mask = False):
     length = weight.numel()
     
     group = int(length/M)
@@ -62,6 +62,11 @@ def get_sparse_weights(weight,N=2,M=4):
     w_b = torch.ones(weight_temp.shape, device=weight_temp.device)
     w_b = w_b.scatter_(dim=1, index=index, value=0).reshape(weight.shape)
 
+    mask = w_b
+
+    if get_mask:
+        return w_b*weight, mask
+    
     return w_b*weight
 
 def Update_model_stats(
@@ -69,18 +74,60 @@ def Update_model_stats(
         model,
         args,
         filename,
+        prev_weights=None,
 
 ):
+    
     rowd = OrderedDict(step_num=step)
-    for weight in model.state_dict():
-        if('fc' in weight and 'weight' in weight):
-            weight_matrix = model.state_dict()[weight] 
-            rowd.update({f'mean_' + str(weight) : torch.mean(weight_matrix).cpu().numpy()})
-            rowd.update({f'std_' + str(weight) :  torch.std(weight_matrix).cpu().numpy()})
-            sparse_weight_matrix = get_sparse_weights(weight_matrix, args.n_sparsity, args.m_sparsity)
-            rowd.update({f'mean_sparse_' + str(weight) : torch.mean(sparse_weight_matrix).cpu().numpy()})
-            rowd.update({f'std_sparse_' + str(weight) :  torch.std(sparse_weight_matrix).cpu().numpy()})
 
+    # ## Weight's mean and std
+    # for weight in model.state_dict():
+    #     if('fc' in weight and 'weight' in weight):
+            # weight_matrix = model.state_dict()[weight] 
+            # rowd.update({f'mean_' + str(weight) : torch.mean(weight_matrix).cpu().numpy()})
+            # rowd.update({f'std_' + str(weight) :  torch.std(weight_matrix).cpu().numpy()})
+            # sparse_weight_matrix, sparse_mask = get_sparse_weights(weight_matrix, args.n_sparsity, args.m_sparsity, get_mask=True)
+            # rowd.update({f'mean_sparse_' + str(weight) : torch.mean(sparse_weight_matrix).cpu().numpy()})
+            # rowd.update({f'std_sparse_' + str(weight) :  torch.std(sparse_weight_matrix).cpu().numpy()})
+
+            ## Sparse Mask
+
+
+
+    ## Weights, W2 - W1 , Sparse Masks
+    if prev_weights is not None:
+        curr_weights = []
+        for name, param in model.named_parameters():
+            if param.requires_grad and param.grad is not None and 'fc' in name and 'weight' in name:
+                # print(f'{name}')
+                ## Current Weights
+                curr_weights, curr_sparse_mask = get_sparse_weights(param.detach().clone(), args.n_sparsity, args.m_sparsity,  get_mask=True)
+                rowd.update({f'mean_sparse_' + str(name) : torch.mean(curr_weights).cpu().numpy()})
+                rowd.update({f'std_sparse_' + str(name) :  torch.std(curr_weights).cpu().numpy()})
+
+                ## W2-W1
+                prev_weights_fc, prev_sparse_mask = get_sparse_weights(prev_weights.pop(0), args.n_sparsity, args.m_sparsity, get_mask=True)
+                weight_diff = curr_weights - prev_weights_fc 
+                # print(f'{name} : {weight_diff}')
+                rowd.update({f'l2_norm_' + str(name) :  torch.norm(weight_diff, p=2).cpu().numpy()}) 
+                rowd.update({f'linf_norm_' + str(name) :  torch.max(weight_diff).cpu().numpy()}) 
+
+                ##sparse_mask
+                mask_diff = curr_sparse_mask - prev_sparse_mask
+                rowd.update({f'SAD_L1_' + str(name) :  torch.norm(mask_diff, p=1).cpu().numpy()}) 
+                rowd.update({f'SAD_L2_' + str(name) :  torch.norm(mask_diff, p=2).cpu().numpy()}) 
+
+            
+    ## Gradients of the weights
+    for name, param in model.named_parameters():
+        if param.requires_grad and param.grad is not None and 'fc' in name and 'weight' in name:
+            # print(f'{name} gradient')
+            rowd.update({f'grad_mean_' + str(name) :  torch.mean(param.grad).cpu().numpy()})  
+            rowd.update({f'grad_l2norm_' + str(name) :  torch.norm(param.grad).cpu().numpy()})  
+            rowd.update({f'grad_linfnorm_' + str(name) :  torch.max(param.grad).cpu().numpy()})  
+
+
+    ## Write to the file
     with open(filename, mode='a') as cf:
         dw = csv.DictWriter(cf, fieldnames=rowd.keys())
         # Get the size of the file
@@ -90,6 +137,7 @@ def Update_model_stats(
         if file_size == 0:
             dw.writeheader()
         dw.writerow(rowd)
+
 
 
 ## Ihba

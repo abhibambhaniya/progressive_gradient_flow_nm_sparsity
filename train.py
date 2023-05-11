@@ -1135,6 +1135,12 @@ def train_one_epoch(
             except:
                 print("cann't find model function for current step num",num_updates,", model name:",model.module)
                 pass
+        
+        ## Weights before update
+        prev_weights = [] 
+        for name, param in model.named_parameters():
+            if param.requires_grad and 'fc' in name and 'weight' in name:
+                prev_weights.append(param.detach().clone())
     #ibha
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
@@ -1178,6 +1184,7 @@ def train_one_epoch(
 
         num_updates += 1
         batch_time_m.update(time.time() - end)
+
         if last_batch or batch_idx % args.log_interval == 0:
             lrl = [param_group['lr'] for param_group in optimizer.param_groups]
             lr = sum(lrl) / len(lrl)
@@ -1206,14 +1213,16 @@ def train_one_epoch(
                 )
 
                     
-               ## ABHI
+                ## ABHI
+                
                 Update_model_stats(
                     current_step_num,
                     model,
                     args,
                     filename=os.path.join(output_dir, 'model_stats.csv'),
-                )
-                ## IHBA
+                    prev_weights=prev_weights)
+
+                ## IHBA              
                 if args.save_images and output_dir:
                     torchvision.utils.save_image(
                         input,
