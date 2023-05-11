@@ -73,11 +73,13 @@ def Update_model_stats(
         step,
         model,
         args,
+        loss,
         filename,
         prev_weights=None,
 
 ):
-    
+
+
     rowd = OrderedDict(step_num=step)
 
     # ## Weight's mean and std
@@ -93,7 +95,7 @@ def Update_model_stats(
             ## Sparse Mask
 
 
-
+    rowd.update({f'loss' : loss.cpu().numpy()})
     ## Weights, W2 - W1 , Sparse Masks
     if prev_weights is not None:
         curr_weights = []
@@ -111,20 +113,28 @@ def Update_model_stats(
                 # print(f'{name} : {weight_diff}')
                 rowd.update({f'l2_norm_' + str(name) :  torch.norm(weight_diff, p=2).cpu().numpy()}) 
                 rowd.update({f'linf_norm_' + str(name) :  torch.max(weight_diff).cpu().numpy()}) 
+                rowd.update({f'std_norm_' + str(name) :  torch.std(weight_diff).cpu().numpy()}) 
 
                 ##sparse_mask
                 mask_diff = curr_sparse_mask - prev_sparse_mask
                 rowd.update({f'SAD_L1_' + str(name) :  torch.norm(mask_diff, p=1).cpu().numpy()}) 
-                rowd.update({f'SAD_L2_' + str(name) :  torch.norm(mask_diff, p=2).cpu().numpy()}) 
+                rowd.update({f'SAD_L2_' + str(name) :  torch.norm(mask_diff, p=2).cpu().numpy()})
+                rowd.update({f'SAD_std_' + str(name) :  torch.std(mask_diff).cpu().numpy()}) 
+
+                ## Gradients of the weights
+                rowd.update({f'grad_mean_' + str(name) :  torch.mean(param.grad).cpu().numpy()})  
+                rowd.update({f'grad_std_' + str(name) :  torch.std(param.grad).cpu().numpy()})  
+                rowd.update({f'grad_l2norm_' + str(name) :  torch.norm(param.grad).cpu().numpy()})  
+                rowd.update({f'grad_linfnorm_' + str(name) :  torch.max(param.grad).cpu().numpy()})   
 
             
-    ## Gradients of the weights
-    for name, param in model.named_parameters():
-        if param.requires_grad and param.grad is not None and 'fc' in name and 'weight' in name:
-            # print(f'{name} gradient')
-            rowd.update({f'grad_mean_' + str(name) :  torch.mean(param.grad).cpu().numpy()})  
-            rowd.update({f'grad_l2norm_' + str(name) :  torch.norm(param.grad).cpu().numpy()})  
-            rowd.update({f'grad_linfnorm_' + str(name) :  torch.max(param.grad).cpu().numpy()})  
+    # ## Gradients of the weights
+    # for name, param in model.named_parameters():
+    #     if param.requires_grad and param.grad is not None and 'fc' in name and 'weight' in name:
+    #         # print(f'{name} gradient')
+    #         rowd.update({f'grad_mean_' + str(name) :  torch.mean(param.grad).cpu().numpy()})  
+    #         rowd.update({f'grad_l2norm_' + str(name) :  torch.norm(param.grad).cpu().numpy()})  
+    #         rowd.update({f'grad_linfnorm_' + str(name) :  torch.max(param.grad).cpu().numpy()})  
 
 
     ## Write to the file
