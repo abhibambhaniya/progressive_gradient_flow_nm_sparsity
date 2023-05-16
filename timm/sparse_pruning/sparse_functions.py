@@ -1,11 +1,9 @@
 """ Sparsity functions in PyTorch
 
-A PyTorch implement of Sparse Linear, Sparse Conv1D and Sparse Conv 2D.
+A PyTorch implement of Sparse Linear, Sparse Three Linear and Sparse Conv 2D.
 
-The implementation has linear decay, exponential decay along with structured decay.
+The implementation has MdGf-Linear, MdGf-Exponential along with SdGf-Stepwise, SdGf-Geometric.
 
-Authors: Abhimanyu Bambhaniya
-         Amir Yazdanbakhsh
 """
 
 from torch import autograd
@@ -19,7 +17,6 @@ import math
 import sys
 
 
-## Abhi
 
 def get_sparse_mask(weight, N, M, sparsity_rate=0.0, isconv=False, sparse_dim = 0):
     length = weight.numel()
@@ -92,12 +89,10 @@ def get_decay_config(sparseConfig):
         structure_decay_config = None
     
     return structure_decay_config
-## Ihba
 
 
-# Amir
-# 
 # SparseSRSTELinear : SR-STE
+# Taken from https://github.com/aojunzz/NM-sparsity
 # Base SR-STE implementation.
 class SparseSRSTE(autograd.Function):
     """" Prune the unimprotant weight for the forwards phase but pass the gradient to dense weight using SR-STE in the backwards phase"""
@@ -120,7 +115,6 @@ class SparseSRSTE(autograd.Function):
         weight, = ctx.saved_tensors
         return grad_output + ctx.decay * (1-ctx.mask) * weight, None, None, None, None, None
     
-# Rima
 
 
 class StepDecay(autograd.Function):
@@ -139,8 +133,6 @@ class StepDecay(autograd.Function):
         return output*w_b
 
 
-## For Decay sparse, we are sending grad_output* weight as back prop,
-## @amir, is this accurate? 
     @staticmethod
     def backward(ctx, grad_output):
         # weight, = ctx.saved_tensors
@@ -166,18 +158,12 @@ class LinearDecay(autograd.Function):
             0.0)
         if(current_step_num%1000==0):
             print("Linear mask decay value:", mask_decay_value )
-        # print(w_b)
-        # plt.matshow(w_b.detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
-        # plt.matshow(model.hidden1.get_sparse_weights().detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
-        # print((1-w_b)*mask_decay_value)
         return output*(w_b + (1-w_b)*mask_decay_value)
 
 
-## For Decay sparse, we are sending grad_output* weight as back prop,
-## @amir, is this accurate? 
+## For Decay sparse, we are sending gradients as it during back propogation,
     @staticmethod
     def backward(ctx, grad_output):
-        # weight, = ctx.saved_tensors
         return grad_output , None, None, None, None, None, None, None
 
 
@@ -197,22 +183,15 @@ class ExponentialDecay(autograd.Function):
         mask_decay_value = math.exp(-1*exp_decay_coef*current_step_num) 
         if(current_step_num%1000==0):
             print("Exponential Mask decay value:", mask_decay_value)
-        # print(w_b)
-        # plt.matshow(w_b.detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
-        # plt.matshow(model.hidden1.get_sparse_weights().detach().numpy(),cmap=cmap, vmin=-1, vmax=1)
-        # print((1-w_b)*mask_decay_value)
-        return output*(w_b + (1-w_b)*mask_decay_value)
+       return output*(w_b + (1-w_b)*mask_decay_value)
 
 
-## For Decay sparse, we are sending grad_output* weight as back prop,
-## @amir, is this accurate? 
     @staticmethod
     def backward(ctx, grad_output):
-        # weight, = ctx.saved_tensors
         return grad_output , None, None, None, None, None, None, None
 
 
-# decay function with linear,exponential,cosine decay. Training step as input, decay value as output.
+# Decay function with linear,exponential,cosine decay. Training step as input, decay value as output.
 
 class SparseLinear(nn.Linear):
 
@@ -229,7 +208,7 @@ class SparseLinear(nn.Linear):
 
 
         self.sparsity_type = sparseConfig.sparsity_type
-        ### Decay type
+        ### Decay type, MdGf
         ## Step :- For all steps enforce the "sparsity_type" for the whole matrix.
         ## Linear :- Linearly decay the mask value from 1 to 0, using the training step number and decay coeffecient.
         ##          Mask decay value = max(0, 1 - linear_decay_coef*(current_step_num-starting_step))
@@ -239,7 +218,7 @@ class SparseLinear(nn.Linear):
         ##
         self.decay_type = sparseConfig.decay_type
 
-        ## Structure_decay 
+        ## Structure_decay , SdGf
         # Flag to enable uniform structure decay to final N:M.
         ## For example, when target sparsity pattern is 1:16, we divide (n-d-f) 
         # steps to five equal time frame, and the sparsity pattern 
@@ -259,7 +238,6 @@ class SparseLinear(nn.Linear):
         self.current_step_num = 0
         self.current_epoch = 0
 
-        ## TBD, update these from real parameters in training run.
         self.dense_epochs = sparseConfig.dense_epochs
         self.fine_tune_epochs = sparseConfig.fine_tune_epochs
         self.total_epochs = sparseConfig.total_epochs
@@ -281,7 +259,6 @@ class SparseLinear(nn.Linear):
                 if(self.current_epoch in self.structure_decay_config ):
                     self.N =  int(self.structure_decay_config[self.current_epoch].split(':')[0])
                     self.M =  int(self.structure_decay_config[self.current_epoch].split(':')[1])
-#                     print("Updating the weights to ",self.N,":",self.M)
 
             ## When doing fine tuning, the mask is binary (0,1)
             if(self.current_epoch > (self.total_epochs-self.fine_tune_epochs)):
@@ -303,7 +280,6 @@ class SparseLinear(nn.Linear):
     def forward(self, x, current_step_num = 0,current_epoch=0):
         self.current_step_num = current_step_num
         self.current_epoch = current_epoch
-#         print("current step num:",current_step_num) 
         w = self.get_sparse_weights()
         x = F.linear(x, w)
         return x
@@ -376,16 +352,6 @@ class SparseThreeLinears(nn.Module):
             v_weight = self.v.weight 
         return torch.cat((q_weight,k_weight,v_weight))
 
-# class SparseConv1D(nn.Conv1D):
-
-#     def forward(self, x, current_step_num = 0):
-#         self.current_step_num = current_step_num
-#         w = self.get_sparse_weights()
-#         size_out = x.size()[:-1] + (self.nf,)
-#         x = torch.addmm(self.bias, x.view(-1, x.size(-1)), w)
-#         x = x.view(size_out)
-#         return x
-
 
 
 class SparseConv2D(nn.Conv2d):
@@ -452,7 +418,6 @@ class SparseConv2D(nn.Conv2d):
                 if(self.current_epoch in self.structure_decay_config ):
                     self.N =  int(self.structure_decay_config[self.current_epoch].split(':')[0])
                     self.M =  int(self.structure_decay_config[self.current_epoch].split(':')[1])
-#                     print("Updating the weights to ",self.N,":",self.M)
 
             ## When doing fine tuning, the mask is binary (0,1)
             if(self.current_epoch > (self.total_epochs-self.fine_tune_epochs)):

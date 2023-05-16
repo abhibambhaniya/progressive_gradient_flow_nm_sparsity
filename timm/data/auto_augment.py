@@ -194,7 +194,6 @@ def gaussian_blur_rand(img, factor, **__):
     return img
 
 
-# Amir
 def cutout(img, factor, **__):
     image_width, image_height = img.size
     
@@ -218,7 +217,6 @@ def cutout(img, factor, **__):
     mask = np.tile(mask, [1, 1, 3])
     final_image = np.where(np.equal(mask, 0), np.ones_like(img)*0, img)
     return Image.fromarray(final_image.astype('uint8')).convert('RGB')
-# Rima
 
 
 def desaturate(img, factor, **_):
@@ -778,7 +776,6 @@ class RandAugment:
 
     def __call__(self, img):
         # no replacement when using weighted choice
-        # AMIR:: if choice_weight None, no replacement
         ops = np.random.choice(
             self.ops,
             self.num_layers,
@@ -869,16 +866,13 @@ def rand_augment_transform(
         transforms = rand_augment_choices(transforms, increasing=increasing)
     elif transforms is None:
         transforms = _RAND_INCREASING_TRANSFORMS if increasing else _RAND_TRANSFORMS
-        # Amir:: increasing is enabled (if you use `inc` in aa parameter)
-        print(f"AMIR:: increaing {transforms}\n")
-        # Rima
+        print(f"increaing {transforms}\n")
 
     choice_weights = None
     if isinstance(transforms, Dict):
         transforms, choice_weights = _get_weighted_transforms(transforms)
-        # print(f"AMIR:: choise_weights {choice_weights}")
         # Default seems not to be dict
-    print(f"AMIR: magnitude {magnitude} -- prob {prob} -- hparams {hparams} -- choice_weights {choice_weights}")
+    print(f"magnitude {magnitude} -- prob {prob} -- hparams {hparams} -- choice_weights {choice_weights}")
     ra_ops = rand_augment_ops(magnitude=magnitude, prob=prob, hparams=hparams, transforms=transforms)
     print(f"Random Ops: {ra_ops}")
     return RandAugment(ra_ops, num_layers, choice_weights=choice_weights)

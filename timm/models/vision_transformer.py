@@ -116,19 +116,11 @@ class Block(nn.Module):
             drop_path=0.,
             act_layer=nn.GELU,
             norm_layer=nn.LayerNorm,
-            #Abhi
             sparseConfig = None
-            #ibha
     ):
         super().__init__()
-        # Abhi
         self.sparseConfig = sparseConfig
         
-        # print(f"Abhi sparsity_type {self.sparsity_type}")
-        # print(f"Abhi n_sparsity {self.n_sparsity}")
-        # print(f"Abhi m_spasrity {self.m_spasrity}")
-        # print(f"Abhi prune_rate  {self.prune_rate}")
-        # Ihba
 
         self.norm1 = norm_layer(dim)
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop, sparseConfig = self.sparseConfig)
@@ -142,13 +134,10 @@ class Block(nn.Module):
         self.ls2 = LayerScale(dim, init_values=init_values) if init_values else nn.Identity()
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-#Abhi
     def forward(self, x,current_step = 0,current_epoch = 0):
-        # print("current step",current_step)
         x = x + self.drop_path1(self.ls1(self.attn(self.norm1(x),current_step=current_step,current_epoch=current_epoch)))
         x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x),current_step=current_step,current_epoch=current_epoch)))
         return x
-#ihba
 
 class ResPostBlock(nn.Module):
 
@@ -274,9 +263,7 @@ class VisionTransformer(nn.Module):
             norm_layer=None,
             act_layer=None,
             block_fn=Block,
-            # Amir: Added sparsity argument to Vision
             sparseConfig=None
-            # Rima: Added sparsity argument to Vision
     ):
         """
         Args:
@@ -316,7 +303,6 @@ class VisionTransformer(nn.Module):
         self.no_embed_class = no_embed_class
         self.grad_checkpointing = False
         
-        # Amir
         self.sparseConfig = sparseConfig
         self.current_step_num = 0
         self.current_epoch = 0
@@ -326,12 +312,6 @@ class VisionTransformer(nn.Module):
         # self.prune_rate = sparseConfig.prune_rate
         
         
-        # print(f"AMIR sparsity_type {self.sparsity_type}")
-        # print(f"AMIR n_sparsity {self.n_sparsity}")
-        # print(f"AMIR m_spasrity {self.m_spasrity}")
-        # print(f"AMIR prune_rate  {self.prune_rate}")
-        # Rime
-
         self.patch_embed = embed_layer(
             img_size=img_size,
             patch_size=patch_size,
@@ -433,7 +413,6 @@ class VisionTransformer(nn.Module):
         x = self.patch_embed(x)
         x = self._pos_embed(x)
         x = self.norm_pre(x)
-        # Abhi
         if self.grad_checkpointing and not torch.jit.is_scripting():
             try:
                 for module in self.blocks.children():
@@ -447,9 +426,7 @@ class VisionTransformer(nn.Module):
                     x = module(x,current_step = self.current_step_num, current_epoch = self.current_epoch)
             except:
                 print('cant find blocks with num step in else')
-                # print(self.blocks.children())
                 x = self.blocks(x)
-        # Ihba
         x = self.norm(x)
         return x
 
@@ -464,12 +441,9 @@ class VisionTransformer(nn.Module):
         x = self.forward_head(x)
         return x
 
-    #ABHI
     def update_step_num(self,step_num,epoch):
-#         print("Updating step num in VIT Top to", step_num)
         self.current_step_num = step_num
         self.current_epoch = epoch
-    #ihba
 
 
 def init_weights_vit_timm(module: nn.Module, name: str = ''):

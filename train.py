@@ -40,16 +40,12 @@ from timm.utils import ApexScaler, NativeScaler
 from timm.utils import Update_model_stats
 
 
-
-# Amir
 import enum
-# Rima
 
 def __repr__(self):
       return self.name + ": " + self.url
 
 
-# Amir
 class SparseType(str, enum.Enum):
   """Pruning types dataclass."""
   DENSE = 'DENSE'
@@ -66,8 +62,7 @@ def restricted_float(x, min_value, max_value):
     if x <= min_value or x >= max_value:
         raise argparse.ArgumentTypeError("%r not in range (0.0, 1.0)"%(x,))
     return x
-# Rima
-#Abhi
+
 class DecayType(str,enum.Enum):
     """Pruning decay type dataclass."""
     STEP = 'STEP'
@@ -227,7 +222,6 @@ scripting_group.add_argument('--torchcompile', nargs='?', type=str, default=None
 scripting_group.add_argument('--aot-autograd', default=False, action='store_true',
                              help="Enable AOT Autograd support.")
 
-# Amir
 # Sparsity parameters
 # All the None values are pruned before passing to models
 group = parser.add_argument_group('Sparsity parameters')
@@ -263,8 +257,6 @@ group.add_argument(
     metavar='PRUNE_RATE',
     help='Prune rate for unstructured sparsity, must be in range (0.0, 1.0).',
 )
-# Rima
-# Abhi
 ## Adding more arguments for sparsity configuration
 group.add_argument(
     '--decay-type',
@@ -639,7 +631,6 @@ def main():
     elif args.input_size is not None:
         in_chans = args.input_size[0]
         
-    # Amir
     if args.sparsity_type is not None:
         if SparseType[args.sparsity_type] == SparseType.STRUCTURED_NM or SparseType[args.sparsity_type] == SparseType.SRSTE :
             if args.n_sparsity is None or args.m_sparsity is None:
@@ -647,9 +638,7 @@ def main():
         if SparseType[args.sparsity_type] == SparseType.UNSTRUCTURED:
             if args.prune_rate is None:
                 raise ValueError("Prune rate must be (0.0, 1.0) for unstructured sparsity.")
-    # Rima
 
-    # Abhi
     ## Making a class object for all sparsity arguments
     sparseConfig = Sparstiy_Args()
 
@@ -686,7 +675,7 @@ def main():
             raise ValueError("Sparse dimension, i.e. dimension along the sparse mask should be ROW or COL .")
     
     print(f"Sparsity configs: {sparseConfig}") 
-    # Ibha
+    
     model = create_model(
         args.model,
         pretrained=args.pretrained,
@@ -700,9 +689,7 @@ def main():
         bn_eps=args.bn_eps,
         scriptable=args.torchscript,
         checkpoint_path=args.initial_checkpoint,
-        # Amir: passing sparsity parameters
         sparseConfig=sparseConfig
-        # Rima
     )
     if args.num_classes is None:
         assert hasattr(model, 'num_classes'), 'Model must have `num_classes` attr if not set on cmd line/config.'
@@ -1071,10 +1058,10 @@ def main():
                     write_header=best_metric is None,
                     log_wandb=args.log_wandb and has_wandb,
                 )
-            print(f"AMIR:: EPOCH {epoch} -- eval {eval_metrics}")
+            print(f"EPOCH {epoch} -- eval {eval_metrics}")
             if saver is not None and epoch % args.checkpoint_freq_epoch == 0:
                 # save proper checkpoint with eval metric
-                print(f"AMIR:: EPOCH {epoch} saving...")
+                print(f"EPOCH {epoch} saving...")
                 save_metric = eval_metrics[eval_metric]
                 best_metric, best_epoch = saver.save_checkpoint(epoch, metric=save_metric)
 
@@ -1123,12 +1110,10 @@ def train_one_epoch(
     last_idx = num_batches_per_epoch - 1
     num_updates = epoch * num_batches_per_epoch
     for batch_idx, (input, target) in enumerate(loader):
-    #Abhi
         current_step_num = num_updates - (num_batches_per_epoch*args.epochs*args.dense_steps/100)
     ## Passing the current step num to ViT Layers, needed for pruning mask reduction. We are subtracting the step num of dense epochs
         try:
             model.module.update_step_num(current_step_num,epoch)
-#             print("current step num",num_updates)
         except:
             try:
                model.update_step_num(current_step_num,epoch) 
@@ -1141,7 +1126,6 @@ def train_one_epoch(
         for name, param in model.named_parameters():
             if param.requires_grad and 'fc' in name and 'weight' in name:
                 prev_weights.append(param.detach().clone())
-    #ibha
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
         if not args.prefetcher:
@@ -1213,16 +1197,6 @@ def train_one_epoch(
                 )
 
                     
-                ## ABHI
-                
-                # Update_model_stats(
-                #     current_step_num,
-                #     model,
-                #     args,
-                #     loss.data,
-                #     filename=os.path.join(output_dir, 'model_stats.csv'),
-                #     prev_weights=prev_weights)
-
                 
                 # Save model weights and gradients
                 state = {'step': int(current_step_num+1), 'loss': loss.data.cpu().numpy()}
@@ -1232,8 +1206,10 @@ def train_one_epoch(
                         state.update({f'{name}_grad': param.grad})
 
                 file_path = os.path.join(output_dir, f'tiny_vit_weights_grad_step_{int(current_step_num+1)}.pt')
-                torch.save(state, file_path)
-                ## IHBA              
+
+                ## Uncomment to log the paramters
+#                 torch.save(state, file_path)
+                
                 if args.save_images and output_dir:
                     torchvision.utils.save_image(
                         input,

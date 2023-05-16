@@ -11,7 +11,6 @@ from ..sparse_pruning import sparse_functions as sf
 class Mlp(nn.Module):
     """ MLP as used in Vision Transformer, MLP-Mixer and related networks
     """
-##Abhi
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, bias=True, drop=0., sparseConfig=None):
         super().__init__()
         self.sparseConfig=sparseConfig
@@ -51,7 +50,6 @@ class Mlp(nn.Module):
         except:
             x = self.fc2(x)
 #         x = self.fc2(x)
-##ibha 
         x = self.drop2(x)
         return x
 

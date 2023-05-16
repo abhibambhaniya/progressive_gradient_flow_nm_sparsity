@@ -527,9 +527,7 @@ class SwinTransformerV2(nn.Module):
             drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
             norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
             pretrained_window_sizes=(0, 0, 0, 0),           
-            # Abhi: Added sparsity argument to Swin
             sparseConfig=None,
-            # Ihba: Added sparsity argument to Swin
             **kwargs):
         super().__init__()
 
@@ -541,12 +539,10 @@ class SwinTransformerV2(nn.Module):
         self.patch_norm = patch_norm
         self.num_features = int(embed_dim * 2 ** (self.num_layers - 1))
 
-        # Abhi
         self.sparseConfig = sparseConfig
         self.current_step_num = 0
         self.current_epoch = 0
         # print(sparseConfig)
-        # Ihba
 
         # split image into non-overlapping patches
         self.patch_embed = PatchEmbed(
@@ -661,12 +657,10 @@ class SwinTransformerV2(nn.Module):
         x = self.forward_head(x)
         return x
     
-    #ABHI
     def update_step_num(self,step_num,epoch):
 #         print("Updating step num in SWIN Top to", step_num)
         self.current_step_num = step_num
         self.current_epoch = epoch
-    #ihba
 
 
 

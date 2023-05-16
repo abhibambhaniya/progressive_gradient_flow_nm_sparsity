@@ -50,7 +50,6 @@ def update_summary(
             dw.writeheader()
         dw.writerow(rowd)
 
-## Abhi
 def get_sparse_weights(weight,N=2,M=4, get_mask = False):
     length = weight.numel()
     
@@ -150,4 +149,3 @@ def Update_model_stats(
 
 
 
-## Ihba

@@ -406,9 +406,7 @@ class Bottleneck(nn.Module):
             self, inplanes, planes, stride=1, downsample=None, cardinality=1, base_width=64,
             reduce_first=1, dilation=1, first_dilation=None, act_layer=nn.ReLU, norm_layer=nn.BatchNorm2d,
             attn_layer=None, aa_layer=None, drop_block=None, drop_path=None,
-            #Abhi
             sparseConfig = None
-            #ibha
             ):
         super(Bottleneck, self).__init__()
 
@@ -460,12 +458,10 @@ class Bottleneck(nn.Module):
     def zero_init_last(self):
         nn.init.zeros_(self.bn3.weight)
 
-    #ABHI
     def update_step_num(self,step_num,epoch):
         # print("Updating step num in bottleneck block to", step_num)
         self.current_step_num = step_num
         self.current_epoch = epoch
-    #ihba
 
     def forward(self, x):
         shortcut = x
@@ -650,9 +646,7 @@ class ResNet(nn.Module):
             cardinality=1, base_width=64, stem_width=64, stem_type='', replace_stem_pool=False, block_reduce_first=1,
             down_kernel_size=1, avg_down=False, act_layer=nn.ReLU, norm_layer=nn.BatchNorm2d, aa_layer=None,
             drop_rate=0.0, drop_path_rate=0., drop_block_rate=0., zero_init_last=True, block_args=None,
-            # Abhi: Added sparsity argument to resnet
             sparseConfig=None
-            # Rima: Added sparsity argument to resnet
             ):
         super(ResNet, self).__init__()
         block_args = block_args or dict()
@@ -661,11 +655,9 @@ class ResNet(nn.Module):
         self.drop_rate = drop_rate
         self.grad_checkpointing = False
 
-        # Abhi
         self.current_epoch = 0
         self.current_step_num = 0
         self.sparseConfig = sparseConfig
-        # Ihba
 
         # Stem
         deep_stem = 'deep' in stem_type
@@ -812,7 +804,6 @@ class ResNet(nn.Module):
         x = self.forward_head(x)
         return x
 
-    #ABHI
     def update_step_num(self,step_num,epoch):
         # print("Updating step num in RN50 Top to", step_num)
         self.current_step_num = step_num
@@ -830,7 +821,6 @@ class ResNet(nn.Module):
             # self.layer1.modules.update_step_num(self.current_step_num,self.current_epoch)
         except:
             print("cann't find model function for current step num",self.current_step_num,", model name:",self.layer1.module)
-    #ihba
 
 
 
