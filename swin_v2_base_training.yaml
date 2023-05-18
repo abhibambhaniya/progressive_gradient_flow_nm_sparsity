@@ -1,0 +1,11 @@
+
+n_sparsity: 2
+m_sparsity: 4 
+sparsity_type: SRSTE
+decay_type: linear
+decay_coef: 0.0008
+dense_steps: 0
+fine_tune_steps: 0
+structure_decay_flag: false
+sparse_dim: COL
+sparsity_loc: FF
