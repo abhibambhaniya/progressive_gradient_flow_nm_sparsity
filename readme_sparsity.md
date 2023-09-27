@@ -69,5 +69,5 @@ Various paramters to enable sparsity are added in the config file. We can tweek 
 
 
 ## Authors
-Anonimized for NeurIPS 2023 Submission
+Anonimized for ICLR 2024 Submission
 
