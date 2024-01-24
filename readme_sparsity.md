@@ -69,5 +69,5 @@ Various paramters to enable sparsity are added in the config file. We can tweek 
 
 
 ## Authors
-Anonimized for ICLR 2024 Submission
+Anonimized for ICML 2024 Submission
 
