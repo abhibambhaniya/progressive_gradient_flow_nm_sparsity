@@ -1,8 +1,9 @@
 # Structured sparsification of Models: Pytorch implementaion
-- [Introduction](#introduction)
-- [Examples](#examples)
-- [Parameters](#parameters)
-- [Authors](#authors)
+- [Introduction](#Introduction)
+- [Examples](#Examples)
+- [Parameters](#Parameters)
+- [Contributors](#Contributors)
+- [Citation](#Citation)
 
 ## Introduction
 
@@ -68,6 +69,29 @@ Various paramters to enable sparsity are added in the config file. We can tweek 
 
 
 
-## Authors
-Anonimized for ICML 2024 Submission
+### Contributors
+* Abhimanyu Bambhaniya
+* Amir Yazdanbakhsh
+* Suvinay Subramanian 
+* Sheng-Chun Kao
+* Shivani Agrawal
+* Utku Evci
+* Tushar Krishna
+
+### Citation
+```
+@software{mdgf_nm,
+  author = {Bambhaniya, Abhimanyu and 
+            Yazdanbakhsh, Amir and 
+            Subramanian, Suvinay and 
+            Kao, Sheng-Chun and
+            Agarwal, Shivani and
+            Evci, Utku and 
+            Krishna, Tushar},
+  title = {{Progressive Gradient Flow for Robust N:M Sparsity Training in Transformers}},
+  url = {https://github.com/abhibambhaniya/mgdf_nm_sparsity},
+  version = {1.0.0},
+  year = {2024}
+}
+```
 
