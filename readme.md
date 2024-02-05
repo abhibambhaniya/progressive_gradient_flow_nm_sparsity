@@ -80,7 +80,7 @@ Various paramters to enable sparsity are added in the config file. We can tweek 
 
 ### Citation
 ```
-@software{mdgf_nm,
+@article{mdgf_nm,
   author = {Bambhaniya, Abhimanyu and 
             Yazdanbakhsh, Amir and 
             Subramanian, Suvinay and 
